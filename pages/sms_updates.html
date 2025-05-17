@@ -61,6 +61,12 @@
     .logo_icon_part {
       fill: #231f20;
     }
+    
+    .logo a {
+      display: flex;
+      height: 100%;
+      text-decoration: none;
+    }
 
     /* Form Popup Styles */
     .form_popup {
@@ -387,6 +393,7 @@
 <body>
   <header class="page_header">
     <div class="logo">
+      <a href="https://ncarnate.ai/" title="Back to Homepage">
       <svg class="logo_icon" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 252 360">
         <defs>
           <style>
@@ -399,6 +406,7 @@
         <path class="logo_icon_part" d="M197.978,2.98c-.527,72.047-.573,222.907-.577,246.021,0,1.661-1.347,2.998-3.007,2.998h-52.044c-2.315,0-3.763,2.504-2.606,4.509,17.261,29.902,41.988,72.729,58.883,101.994.537.931,1.526,1.497,2.601,1.497h47.766c1.661,0,3.007-1.346,3.007-3.007V3.007c0-1.661-1.346-3.007-3.007-3.007h-48.008c-1.652,0-2.995,1.328-3.007,2.98Z"/>
         <path class="logo_icon_part" d="M50.773,0H3.007C1.346,0,0,1.346,0,3.007v353.985c0,1.661,1.346,3.007,3.007,3.007h47.985c1.661,0,3.007-1.346,3.007-3.007V111.007c0-1.661,1.346-3.007,3.007-3.007h52.644c2.315,0,3.762-2.506,2.605-4.511L53.378,1.504c-.537-.931-1.53-1.504-2.605-1.504Z"/>
       </svg>
+      </a>
     </div>
   </header>
 
@@ -422,7 +430,7 @@
         
         <div class="form_field">
             <p class="consent_language">
-                By providing your phone number and checking this box, you consent to receive SMS messages from ncarnate.ai (Ncarnate Labs LLC) for updates and notifications. Message and data rates may apply. Reply STOP to opt-out.
+                By providing your phone number and checking this box, you consent to receive SMS messages from ncarnate.ai (Ncarnate Labs LLC) for updates and notifications. Message and data rates may apply.
             </p>
             <div class="checkbox_field required">
                 <input type="checkbox" id="sms_consent_checkbox" name="sms_consent_checkbox" required>
