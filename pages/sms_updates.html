@@ -1,0 +1,565 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>SMS Updates - Ncarnate Labs</title>
+  <link rel="preconnect" href="https://rsms.me/">
+  <link rel="stylesheet" href="https://rsms.me/inter/inter.css">
+  <style>
+    :root {
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-feature-settings: 'liga' 1, 'calt' 1;
+      scroll-behavior: smooth;
+    }
+    @supports (font-variation-settings: normal) {
+      :root { font-family: 'Inter var', system-ui, -apple-system, sans-serif; }
+    }
+
+    body {
+      margin: 0;
+      background: #e6e6e6;
+      color: #111;
+      min-height: 100vh;
+      overflow-x: hidden;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      --font-size_small: clamp(0.9rem, 1.2vw, 1.1rem);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .page_header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.6rem;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      box-sizing: border-box;
+      z-index: 10;
+      background: rgba(230, 230, 230, 0.9);
+      backdrop-filter: blur(10px);
+    }
+
+    .logo {      
+      height: 1.6em;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .logo img {
+      width: 100%;
+      height: auto;
+      display: block;
+    }
+    
+    .logo_icon_part {
+      fill: #231f20;
+    }
+
+    /* Form Popup Styles */
+    .form_popup {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background-color: rgba(0, 0, 0, 0.7);
+      display: none; /* Initially hidden, shown by JS */
+      align-items: center;
+      justify-content: center;
+      z-index: 2000;
+      backdrop-filter: blur(8px);
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+    
+    .form_popup.active {
+      display: flex;
+      opacity: 1;
+    }
+    
+    .form_popup_content {
+      background-color: #fff;
+      padding: 3.5rem 3.5rem 3rem;
+      max-width: 480px;
+      width: 90%;
+      position: relative;
+      box-sizing: border-box;
+      box-shadow: 0 15px 40px rgba(0, 0, 0, 0.2);
+      transform: translateY(20px);
+      opacity: 0;
+      transition: transform 0.4s ease, opacity 0.4s ease;
+      border-radius: 3px;
+      border-top: 3px solid #111;
+    }
+    
+    .form_popup.active .form_popup_content {
+      transform: translateY(0);
+      opacity: 1;
+    }
+    
+    .close_button {
+      position: absolute;
+      top: 1.75rem;
+      right: 1.75rem;
+      background: none;
+      border: none;
+      width: 28px;
+      height: 28px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: transform 0.2s ease;
+      cursor: pointer;
+      opacity: 0.6;
+      border-radius: 50%;
+    }
+    
+    .close_button:before, .close_button:after {
+      content: '';
+      position: absolute;
+      width: 18px;
+      height: 2px;
+      background-color: #333;
+      transition: background-color 0.2s ease;
+    }
+    
+    .close_button:before {
+      transform: rotate(45deg);
+    }
+    
+    .close_button:after {
+      transform: rotate(-45deg);
+    }
+    
+    .close_button:hover {
+      transform: scale(1.1) rotate(90deg);
+      opacity: 1;
+    }
+    
+    .form_title {
+      font-size: 1.85rem;
+      font-weight: 600;
+      margin: 0 0 2.5rem 0;
+      letter-spacing: -0.02em;
+      color: #111;
+      position: relative;
+      display: inline-block;
+    }
+    
+    .form_title:after {
+      content: "";
+      position: absolute;
+      bottom: -10px;
+      left: 0;
+      width: 40px;
+      height: 3px;
+      background-color: rgba(0, 0, 0, 0.1);
+    }
+    
+    .consent_form { /* Renamed from preview_form */
+      display: flex;
+      flex-direction: column;
+      gap: 1.75rem;
+    }
+    
+    .form_field {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      position: relative;
+    }
+    
+    .form_field label {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: #555;
+      letter-spacing: 0.01em;
+      transform-origin: left;
+      transition: color 0.2s ease;
+    }
+    
+    .form_field input[type="text"],
+    .form_field input[type="tel"] {
+      padding: 0.95rem 1rem;
+      border: 1px solid #ddd;
+      font-size: 1rem;
+      font-family: inherit;
+      border-radius: 2px;
+      transition: all 0.25s ease;
+      background-color: #f9f9f9;
+    }
+    
+    .form_field input[type="text"]:focus,
+    .form_field input[type="tel"]:focus {
+      outline: none;
+      border-color: #333;
+      background-color: #fff;
+      box-shadow: 0 3px 8px rgba(0, 0, 0, 0.07);
+    }
+    
+    .form_field input[type="text"]:focus + label,
+    .form_field input[type="tel"]:focus + label {
+      color: #111;
+    }
+        
+    .form_field input[type="text"]::placeholder,
+    .form_field input[type="tel"]::placeholder {
+      color: #aaa;
+      opacity: 0.8;
+      transition: opacity 0.2s ease;
+    }
+    
+    .form_field input[type="text"]:focus::placeholder,
+    .form_field input[type="tel"]:focus::placeholder {
+      opacity: 0.5;
+    }
+
+    .consent_language {
+      font-size: 0.85rem;
+      color: #666;
+      line-height: 1.5;
+      margin-bottom: 0.5rem;
+    }
+
+    .checkbox_field {
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+      margin-top: 0.5rem;
+    }
+
+    .checkbox_field input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      accent-color: #111;
+      cursor: pointer;
+    }
+
+    .checkbox_field label {
+      font-size: 0.9rem;
+      color: #555;
+      cursor: pointer;
+    }
+    
+    .submit_button {
+      background-color: #111;
+      color: white;
+      border: none;
+      padding: 1.1rem;
+      font-size: 1rem;
+      font-weight: 500;
+      cursor: pointer;
+      margin-top: 1rem;
+      letter-spacing: 0.03em;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      border-radius: 2px;
+      position: relative;
+      overflow: hidden;
+    }
+    
+    .submit_button:before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: -100%;
+      width: 100%;
+      height: 100%;
+      background: rgba(255, 255, 255, 0.1);
+      transition: transform 0.6s ease;
+      transform: skewX(-20deg);
+    }
+    
+    .submit_button:hover {
+      background-color: #222;
+      transform: translateY(-2px);
+      box-shadow: 0 6px 14px rgba(0, 0, 0, 0.15);
+    }
+    
+    .submit_button:hover:before {
+      transform: translateX(200%) skewX(-20deg);
+    }
+    
+    .submit_button:active {
+      transform: translateY(0);
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .success_message {
+      text-align: center;
+      color: #333;
+      font-size: 1.25rem;
+      line-height: 1.5;
+      padding: 2.5rem 1rem;
+      animation: fadeIn 0.5s ease forwards;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    @media (max-width: 768px) {
+      .form_popup_content {
+        padding: 3rem 2.5rem 2.5rem;
+      }
+      
+      .form_title {
+        font-size: 1.7rem;
+        margin-bottom: 2.25rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .form_popup_content {
+        padding: 2.5rem 1.75rem 2rem;
+        width: 95%;
+      }
+      
+      .form_title {
+        font-size: 1.5rem;
+        margin-bottom: 2rem;
+      }
+      
+      .form_field input[type="text"],
+      .form_field input[type="tel"] {
+        padding: 0.85rem 0.9rem;
+      }
+      
+      .close_button {
+        top: 1.5rem;
+        right: 1.5rem;
+      }
+    }
+
+    .form_field.required label:after {
+      content: "*";
+      color: #e53935;
+      margin-left: 4px;
+    }
+    
+    .form_field input.validation_error,
+    .form_field input:invalid:not(:placeholder-shown) { /* Added :not(:placeholder-shown) to avoid premature validation on empty fields */
+      border-color: #e53935;
+      background-color: rgba(229, 57, 53, 0.03);
+    }
+    
+    .form_field .validation_message {
+      display: none;
+      font-size: 0.8rem;
+      color: #e53935;
+      margin-top: 4px;
+    }
+    
+    .form_field input.validation_error ~ .validation_message,
+    .form_field input:invalid:not(:placeholder-shown) ~ .validation_message {
+      display: block;
+    }
+
+    .trigger_button { /* Style for the button that opens the modal */
+      background-color: #111;
+      color: white;
+      border: none;
+      padding: 1.2rem 3rem;
+      font-size: clamp(1rem, 1.4vw, 1.25rem);
+      font-weight: 500;
+      cursor: pointer;
+      letter-spacing: 0.04em;
+      transition: all 0.3s ease;
+      box-shadow: 0 6px 18px rgba(0,0,0,0.15);
+      border-radius: 3px;
+    }
+
+    .trigger_button:hover {
+      background-color: #333;
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <header class="page_header">
+    <div class="logo">
+      <svg class="logo_icon" data-name="Layer 1" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 252 360">
+        <defs>
+          <style>
+            .logo_icon {
+              height: 100%;
+            }
+            /* .logo_icon_part defined above */
+          </style>
+        </defs>
+        <path class="logo_icon_part" d="M197.978,2.98c-.527,72.047-.573,222.907-.577,246.021,0,1.661-1.347,2.998-3.007,2.998h-52.044c-2.315,0-3.763,2.504-2.606,4.509,17.261,29.902,41.988,72.729,58.883,101.994.537.931,1.526,1.497,2.601,1.497h47.766c1.661,0,3.007-1.346,3.007-3.007V3.007c0-1.661-1.346-3.007-3.007-3.007h-48.008c-1.652,0-2.995,1.328-3.007,2.98Z"/>
+        <path class="logo_icon_part" d="M50.773,0H3.007C1.346,0,0,1.346,0,3.007v353.985c0,1.661,1.346,3.007,3.007,3.007h47.985c1.661,0,3.007-1.346,3.007-3.007V111.007c0-1.661,1.346-3.007,3.007-3.007h52.644c2.315,0,3.762-2.506,2.605-4.511L53.378,1.504c-.537-.931-1.53-1.504-2.605-1.504Z"/>
+      </svg>
+    </div>
+  </header>
+
+  <button id="open_consent_form_btn" class="trigger_button">Sign Up for SMS Updates</button>
+
+  <div id="consent_form_popup" class="form_popup">
+    <div class="form_popup_content">
+      <button id="close_consent_form_btn" class="close_button"></button>
+      <h3 class="form_title">Sign Up for SMS Updates</h3>
+      <form id="consent_form" class="consent_form" novalidate>
+        <div class="form_field required">
+          <label for="name">Name</label>
+          <input type="text" id="name" name="name" placeholder="Your full name" required>
+          <div class="validation_message">Please enter your name.</div>
+        </div>
+        <div class="form_field required">
+          <label for="phone">Phone Number</label>
+          <input type="tel" id="phone" name="phone" placeholder="+1 555-123-4567" required pattern="^\+\d{1,3}\s?\d{4,14}$">
+          <div class="validation_message">Please enter a valid phone number including your country code (e.g., +1 555-123-4567).</div>
+        </div>
+        
+        <div class="form_field">
+            <p class="consent_language">
+                By providing your phone number and checking this box, you consent to receive SMS messages from ncarnate.ai (Ncarnate Labs LLC) for updates and notifications. Message and data rates may apply. Reply STOP to opt-out.
+            </p>
+            <div class="checkbox_field required">
+                <input type="checkbox" id="sms_consent_checkbox" name="sms_consent_checkbox" required>
+                <label for="sms_consent_checkbox">I agree to the terms above.</label>
+            </div>
+             <div class="validation_message" id="checkbox_validation_message" style="display:none;">Please check this box to consent.</div>
+        </div>
+
+        <button type="submit" class="submit_button">Submit</button>
+      </form>
+    </div>
+  </div>
+
+  <script>
+    document.addEventListener('DOMContentLoaded', function() {
+      const open_form_btn = document.getElementById('open_consent_form_btn');
+      const close_form_btn = document.getElementById('close_consent_form_btn');
+      const form_popup = document.getElementById('consent_form_popup');
+      const form_popup_content = form_popup.querySelector('.form_popup_content');
+      const consent_form = document.getElementById('consent_form');
+
+      function show_form_popup() {
+        form_popup.classList.add('active');
+        // Optional: disable body scroll if needed, though for a single page might not be necessary
+        // document.body.style.overflow = 'hidden'; 
+      }
+
+      function close_form_popup() {
+        form_popup.style.opacity = '0';
+        if (form_popup_content) {
+            form_popup_content.style.opacity = '0';
+            form_popup_content.style.transform = 'translateY(20px)';
+        }
+        
+        setTimeout(() => {
+          form_popup.classList.remove('active');
+          // document.body.style.overflow = '';
+          
+          setTimeout(() => {
+            form_popup.style.opacity = '';
+            if (form_popup_content) {
+                form_popup_content.style.opacity = '';
+                form_popup_content.style.transform = '';
+            }
+          }, 100);
+        }, 300);
+      }
+      
+      // Automatically show the form on page load as per implication of a single page for this purpose
+      show_form_popup(); 
+
+      if (open_form_btn) { // Though it auto-opens, keep for potential direct triggering if page structure changes
+          open_form_btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            show_form_popup();
+          });
+      }
+
+      if (close_form_btn) {
+          close_form_btn.addEventListener('click', function() {
+            close_form_popup();
+          });
+      }
+
+      if (form_popup) {
+          form_popup.addEventListener('click', function(e) {
+            if (e.target === form_popup) {
+              close_form_popup();
+            }
+          });
+      }
+      
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && form_popup.classList.contains('active')) {
+          close_form_popup();
+        }
+      });
+
+      if (consent_form) {
+        consent_form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          const name_input = document.getElementById('name');
+          const phone_input = document.getElementById('phone');
+          const consent_checkbox = document.getElementById('sms_consent_checkbox');
+          const checkbox_validation_message = document.getElementById('checkbox_validation_message');
+          let has_error = false;
+
+          // Clear previous validation states
+          name_input.classList.remove('validation_error');
+          phone_input.classList.remove('validation_error');
+          if (checkbox_validation_message) checkbox_validation_message.style.display = 'none';
+          
+          if (!name_input.value.trim()) {
+            name_input.classList.add('validation_error');
+            has_error = true;
+          }
+          
+          const phone_regex = /^\+\d{1,3}\s?\d{4,14}$/;
+          if (!phone_input.value.trim() || !phone_regex.test(phone_input.value)) {
+            phone_input.classList.add('validation_error');
+            has_error = true;
+          }
+
+          if (!consent_checkbox.checked) {
+            if (checkbox_validation_message) checkbox_validation_message.style.display = 'block';
+            has_error = true;
+          }
+          
+          if (has_error) {
+            return; 
+          }
+          
+          // Simulation: Show success message
+          if (form_popup_content) {
+            form_popup_content.style.opacity = '0';
+            setTimeout(() => {
+              form_popup_content.innerHTML = `
+                <div class="success_message">
+                  <svg style="width: 48px; height: 48px; margin-bottom: 1rem; color: #4CAF50" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                  </svg>
+                  <p style="margin-bottom: 0.5rem; font-weight: 500; font-size: 1.4rem;">Success!</p>
+                  <p style="margin: 0; color: #666;">Consent form submitted.</p>
+                </div>
+              `;
+              form_popup_content.style.opacity = '1';
+              
+              setTimeout(() => {
+                // Optionally close popup or reset for another submission
+                // close_form_popup(); 
+              }, 3000); // Keep success message for 3 seconds
+            }, 300);
+          }
+        });
+      }
+    });
+  </script>
+</body>
+</html> 
