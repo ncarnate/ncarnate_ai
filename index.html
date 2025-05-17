@@ -1314,6 +1314,35 @@
     .mobile_only {
       display: none;
     }
+
+/* Legal Footer Styles */
+    .legal_footer {
+      background-color: #e6e6e6; /* Match body background */
+      color: #666; /* Subtle text color */
+      padding: 2rem 1rem;
+      text-align: center;
+      font-size: 0.8rem; /* Smaller than --font-size_small */
+      line-height: 1.5;
+      border-top: 1px solid #ccc; /* Subtle separator */
+      margin-top: 2rem; /* Better separation from content above */
+    }
+
+    .legal_footer p {
+      margin: 0.3rem 0;
+    }
+
+    .designed_by_line {
+      font-weight: 600; /* Bolder */
+      color: #555; /* Slightly darker for emphasis */
+      margin-bottom: 0.5rem; /* Add a bit more space below it */
+    }
+    
+    @media (max-width: 480px) {
+      .legal_footer {
+        padding: 1.5rem 0.75rem;
+      }
+    }
+
   </style>
 </head>
 <body>
@@ -1388,7 +1417,7 @@ document.addEventListener('DOMContentLoaded', function() {
     <div class="product_pattern"></div>
     <div class="product_content">
       <div class="section_headline">The form factor of future software isn't meant for humans</div>
-      <h2 class="api_statement">We Build Apps For Agents</h2>
+      <h2 class="api_statement">We Design Apps For Agents</h2>
       
       <div class="feature_grid">
         <div class="feature_item">
@@ -2301,6 +2330,11 @@ document.addEventListener('DOMContentLoaded', function() {
   document.addEventListener('DOMContentLoaded', init_footer_animations);
   window.addEventListener('resize', debounce_footer_anim(init_footer_animations, 250));
 </script>
+
+  <footer class="legal_footer">
+    <p class="designed_by_line">Designed by Humans | Built by AI</p>
+    <p>&copy; 2025 Ncarnate Labs LLC. All rights reserved.</p>
+  </footer>
 
 </body>
 </html>
