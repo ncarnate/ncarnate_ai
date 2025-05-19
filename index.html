@@ -28,7 +28,15 @@
       -webkit-font-smoothing: antialiased;
       -moz-osx-font-smoothing: grayscale;
       --font-size_small: clamp(0.9rem, 1.2vw, 1.1rem);
+      overflow-y: auto;
+      -webkit-overflow-scrolling: touch;
+      overscroll-behavior-y: none;
     }
+
+    html {
+      height: -webkit-fill-available; /* Additional fix for mobile browsers */
+    }
+
 
     .page_header {
       display: flex;
