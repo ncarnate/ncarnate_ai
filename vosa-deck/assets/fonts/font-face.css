@@ -1,0 +1,447 @@
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-Thin.woff2) format("woff2");
+    font-weight: 100;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-ThinOblique.woff2) format("woff2");
+    font-weight: 100;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-ExtraLight.woff2) format("woff2");
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-ExtraLightOblique.woff2) format("woff2");
+    font-weight: 200;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-Light.woff2) format("woff2");
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-LightOblique.woff2) format("woff2");
+    font-weight: 300;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-SemiLight.woff2) format("woff2");
+    font-weight: 350;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-SemiLightOblique.woff2) format("woff2");
+    font-weight: 350;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-Regular.woff2) format("woff2");
+    font-weight: normal;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-Oblique.woff2) format("woff2");
+    font-weight: normal;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-Medium.woff2) format("woff2");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-MediumOblique.woff2) format("woff2");
+    font-weight: 500;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-SemiBold.woff2) format("woff2");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-SemiBoldOblique.woff2) format("woff2");
+    font-weight: 600;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-Bold.woff2) format("woff2");
+    font-weight: bold;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-BoldOblique.woff2) format("woff2");
+    font-weight: bold;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-ExtraBold.woff2) format("woff2");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-ExtraBoldOblique.woff2) format("woff2");
+    font-weight: 800;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-Black.woff2) format("woff2");
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: 'Berkeley Mono';
+    src: url(./berkeley_mono/web/TX-02-BlackOblique.woff2) format("woff2");
+    font-weight: 900;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-Thin.otf) format("opentype");
+    font-weight: 100;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-ThinItalic.otf) format("opentype");
+    font-weight: 100;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-Ultralight.otf) format("opentype");
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-UltralightItalic.otf) format("opentype");
+    font-weight: 200;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-Light.otf) format("opentype");
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-LightItalic.otf) format("opentype");
+    font-weight: 300;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-Regular.otf) format("opentype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-RegularItalic.otf) format("opentype");
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-Medium.otf) format("opentype");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-MediumItalic.otf) format("opentype");
+    font-weight: 500;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-Semibold.otf) format("opentype");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-SemiboldItalic.otf) format("opentype");
+    font-weight: 600;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-Bold.otf) format("opentype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-BoldItalic.otf) format("opentype");
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-Heavy.otf) format("opentype");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-HeavyItalic.otf) format("opentype");
+    font-weight: 800;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-Black.otf) format("opentype");
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Display";
+    src: url(./SF-Pro/SF-Pro-Display-BlackItalic.otf) format("opentype");
+    font-weight: 900;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-Thin.otf) format("opentype");
+    font-weight: 100;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-ThinItalic.otf) format("opentype");
+    font-weight: 100;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-Ultralight.otf) format("opentype");
+    font-weight: 200;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-UltralightItalic.otf) format("opentype");
+    font-weight: 200;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-Light.otf) format("opentype");
+    font-weight: 300;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-LightItalic.otf) format("opentype");
+    font-weight: 300;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-Regular.otf) format("opentype");
+    font-weight: 400;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-RegularItalic.otf) format("opentype");
+    font-weight: 400;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-Medium.otf) format("opentype");
+    font-weight: 500;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-MediumItalic.otf) format("opentype");
+    font-weight: 500;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-Semibold.otf) format("opentype");
+    font-weight: 600;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-SemiboldItalic.otf) format("opentype");
+    font-weight: 600;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-Bold.otf) format("opentype");
+    font-weight: 700;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-BoldItalic.otf) format("opentype");
+    font-weight: 700;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-Heavy.otf) format("opentype");
+    font-weight: 800;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-HeavyItalic.otf) format("opentype");
+    font-weight: 800;
+    font-style: italic;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-Black.otf) format("opentype");
+    font-weight: 900;
+    font-style: normal;
+    font-display: swap
+}
+
+@font-face {
+    font-family: "SF Pro Text";
+    src: url(./SF-Pro/SF-Pro-Text-BlackItalic.otf) format("opentype");
+    font-weight: 900;
+    font-style: italic;
+    font-display: swap
+}
