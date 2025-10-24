@@ -150,6 +150,8 @@
       filter: grayscale(100%) contrast(110%);
       z-index: 1;
       will-change: transform;
+      transform: scale(1.15) translateX(-2%);
+      transform-origin: center center;
     }
 
     .header_right a {
@@ -1392,33 +1394,6 @@
       <img class="hero_image" src="./assets/ncarnate_monkey.jpg" alt="Monkey Neural Vision">
     </div>
   </section>
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  gsap.registerPlugin(ScrollTrigger);
-  const prefersReducedMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-
-  if (!prefersReducedMotion) {
-    const hero_image = document.querySelector('.hero_image');
-    if (hero_image) {
-      const ken_burns_tl = gsap.timeline({ repeat: -1, paused: false });
-      ken_burns_tl.fromTo(hero_image, 
-        { scale: 1.05, xPercent: 0, yPercent: 0 }, 
-        { scale: 1.15, xPercent: -2, yPercent: 0, duration: 20, ease: "none" }
-      );
-      hero_image.addEventListener('mouseenter', () => ken_burns_tl.pause());
-      hero_image.addEventListener('mouseleave', () => ken_burns_tl.play());
-      window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', e => {
-        if (e.matches) {
-          ken_burns_tl.pause();
-          gsap.set(hero_image, {scale: 1, xPercent: 0, yPercent: 0});
-        } else {
-          ken_burns_tl.play();
-        }
-      });
-    }
-  }
-});
-</script>
 
   <!-- Section 2: Product -->
   <section id="product">
