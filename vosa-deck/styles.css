@@ -824,7 +824,7 @@ body.hero-visible .site-header {
   position: relative;
   display: flex;
   flex-direction: column;
-  gap: 1rem;
+  gap: 0.5rem;
   padding-right: clamp(1.5rem, 4vw, 4.5rem);
   padding-bottom: clamp(4rem, 10vw, 6.5rem);
   isolation: isolate;
@@ -1035,6 +1035,175 @@ body.hero-visible .site-header {
   .vosa-design-apps__testimonials-row {
     grid-template-columns: 1fr;
     row-gap: clamp(0.45rem, 1.5vw, 0.75rem);
+  }
+}
+
+/* Apps for AI - Feature Pills */
+.vosa-design-apps__features {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(2rem, 4vw, 2.75rem);
+  padding: clamp(2rem, 4vw, 3rem) 0 clamp(2rem, 5vw, 3rem);
+  margin-top: clamp(6rem, 14vw, 10rem);
+  position: relative;
+  z-index: 3;
+}
+
+.vosa-design-apps__features-intro {
+  color: var(--color-text-secondary);
+  font-size: 1.35rem;
+  line-height: 1.4;
+  margin: 0 0 clamp(1rem, 2vw, 1.5rem) 0;
+  max-width: 32ch;
+}
+
+.vosa-design-apps__feature-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  column-gap: clamp(1.5rem, 3vw, 2.5rem);
+  row-gap: clamp(1.5rem, 3vw, 2rem);
+}
+
+.vosa-design-apps__feature-pill {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 1.25rem);
+}
+
+.feature-pill__title {
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-accent-blue);
+  letter-spacing: 0;
+  text-transform: uppercase;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.vosa-design-apps__feature-pill:nth-child(1) .feature-pill__title {
+  color: var(--color-accent-green);
+}
+
+.vosa-design-apps__feature-pill:nth-child(2) .feature-pill__title {
+  color: var(--color-accent-blue);
+}
+
+.vosa-design-apps__feature-pill:nth-child(3) .feature-pill__title {
+  color: var(--color-accent-purple);
+}
+
+.feature-pill__description {
+  color: var(--color-text-secondary);
+  margin: 0;
+  line-height: 1.45;
+}
+
+@media (max-width: 1279px) {
+  .vosa-design-apps__features {
+    margin-top: 0;
+  }
+
+  .vosa-design-apps__feature-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: clamp(1.25rem, 2vw, 1.8rem);
+  }
+}
+
+@media (max-width: 767px) {
+  .vosa-design-apps__features {
+    padding-top: 0;
+    padding-bottom: clamp(0.55rem, 1.8vw, 1rem);
+    margin-top: -0.15rem;
+  }
+
+  .vosa-design-apps__feature-grid {
+    grid-template-columns: 1fr;
+    gap: clamp(1.5rem, 3vw, 2rem);
+  }
+}
+
+/* ============================================================================
+   TESTIMONIALS SECTION
+   ============================================================================ */
+.testimonials-section {
+  padding: clamp(5rem, 8vw, 7rem) 0;
+  border-top: 1px solid var(--color-border);
+  background: #000000;
+}
+
+.testimonials-container {
+  display: grid;
+  grid-template-columns: repeat(var(--grid-columns), minmax(0, 1fr));
+  column-gap: var(--grid-gutter);
+  row-gap: clamp(2rem, 4vw, 3rem);
+  max-width: var(--grid-max-width);
+  margin: 0 auto;
+  width: 100%;
+  padding: 0 var(--grid-padding);
+}
+
+.testimonials-tagline {
+  grid-column: 1 / -1;
+  font-family: var(--font-mono);
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--color-gold);
+  letter-spacing: 0;
+  text-transform: uppercase;
+  display: inline-flex;
+  align-self: start;
+  justify-self: center;
+  margin-bottom: clamp(0.5rem, 1.5vw, 1rem);
+}
+
+.testimonials-grid {
+  grid-column: 1 / -1;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: clamp(2rem, 4vw, 4rem);
+  row-gap: clamp(2.5rem, 5vw, 4rem);
+}
+
+.testimonial-quote {
+  display: flex;
+  flex-direction: column;
+  gap: clamp(1rem, 2vw, 1.35rem);
+  min-height: 100%;
+  text-align: center;
+}
+
+.testimonial-quote blockquote {
+  margin: 0;
+  font-size: clamp(1.5rem, 2.8vw, 2rem);
+  font-style: italic;
+  color: var(--color-text-primary);
+  line-height: 1.3;
+  flex: 1;
+}
+
+.testimonial-quote cite {
+  font-size: 0.875rem;
+  color: var(--color-text-tertiary);
+  line-height: 1.5;
+  font-style: normal;
+  display: block;
+}
+
+@media (max-width: 1279px) {
+  .testimonials-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 767px) {
+  .testimonials-section {
+    padding: clamp(3.5rem, 6vw, 5rem) 0;
+  }
+
+  .testimonials-grid {
+    grid-template-columns: 1fr;
+    gap: clamp(1.75rem, 4vw, 2.5rem);
   }
 }
 
