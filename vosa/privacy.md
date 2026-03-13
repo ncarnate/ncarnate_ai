@@ -1,6 +1,5 @@
 # Privacy Policy
 
-**Effective Date: March 12, 2026**
 **Last Updated: March 12, 2026**
 
 This Privacy Policy describes how **Ncarnate Labs, LLC** ("Ncarnate," "we," "us," or "our") collects, uses, discloses, and retains information in connection with the VOSA platform, software, APIs, integrations, websites, and related services (the "Service").

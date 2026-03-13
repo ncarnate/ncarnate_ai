@@ -1,6 +1,6 @@
 # End-User License Agreement
 
-**Effective Date: March 12, 2026**
+**Last Updated: March 12, 2026**
 
 This End-User License Agreement (the "Agreement") is between you and **Ncarnate Labs, LLC**, a Nevada limited liability company ("Ncarnate," "we," "us," or "our"), and governs your access to and use of the VOSA platform, software, APIs, integrations, websites, and related services (collectively, the "Service").
 
