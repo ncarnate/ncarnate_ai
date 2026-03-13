@@ -121,5 +121,5 @@ We may change this Privacy Policy at any time. The revised version is effective 
 ## 12. Contact
 
 **Ncarnate Labs, LLC**
-[enterprise@ncarnate.ai](mailto:enterprise@ncarnate.ai)
+[legal@ncarnate.ai](mailto:legal@ncarnate.ai)
 ncarnate.ai

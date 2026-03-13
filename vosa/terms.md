@@ -137,5 +137,5 @@ This Agreement is the entire agreement between you and Ncarnate regarding the Se
 ## 16. Contact
 
 **Ncarnate Labs, LLC**
-[enterprise@ncarnate.ai](mailto:enterprise@ncarnate.ai)
+[legal@ncarnate.ai](mailto:legal@ncarnate.ai)
 ncarnate.ai
