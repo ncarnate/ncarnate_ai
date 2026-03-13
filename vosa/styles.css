@@ -2163,3 +2163,37 @@ body.hero-visible .site-header {
 .enterprise-info__copy {
   max-width: clamp(35ch, 45%, 440px);
 }
+
+/* Footer */
+.site-footer {
+  padding: 2rem 0 3rem;
+  text-align: center;
+}
+
+.footer-legal {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.footer-legal a {
+  font-family: var(--font-mono);
+  font-size: 0.75rem;
+  color: var(--color-secondary);
+  text-decoration: none;
+  opacity: 0.4;
+  letter-spacing: 0.04em;
+  transition: opacity 0.2s;
+}
+
+.footer-legal a:hover {
+  opacity: 0.8;
+  color: var(--color-gold);
+}
+
+.footer-sep {
+  color: var(--color-secondary);
+  opacity: 0.25;
+  font-size: 0.75rem;
+}
