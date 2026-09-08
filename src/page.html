@@ -1,0 +1,57 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Ncarnate</title>
+<meta name="description" content="Ncarnate Labs">
+<style>
+  :root { color-scheme: dark; }
+  * { margin:0; padding:0; box-sizing:border-box; }
+  html, body { height:100%; background:#0a0a0b; }
+  body { overflow-x:hidden; -webkit-font-smoothing:antialiased; }
+  canvas#gl { position:fixed; inset:0; width:100%; height:100%; display:block; z-index:0; }
+  #scroll_track { position:relative; z-index:1; pointer-events:none; }
+  .sr { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden;
+        clip:rect(0 0 0 0); white-space:nowrap; border:0; }
+  #hud { position:fixed; left:10px; bottom:10px; z-index:10; font:11px ui-monospace,Menlo,monospace;
+         color:#9aa; background:rgba(0,0,0,.55); padding:6px 9px; border-radius:4px;
+         white-space:pre; pointer-events:none; opacity:0; transition:opacity .2s; }
+  #hud.on { opacity:1; }
+
+  /* the only chrome: an invitation to scroll, which leaves as soon as you do */
+  #cue { position:fixed; left:50%; bottom:34px; transform:translateX(-50%); z-index:2;
+         display:flex; flex-direction:column; align-items:center; gap:12px;
+         pointer-events:none; opacity:0; transition:opacity 1.1s ease; }
+  #cue.on { opacity:1; }
+  #cue span { font:400 9px/1 ui-sans-serif,-apple-system,"Helvetica Neue",sans-serif;
+              letter-spacing:.34em; text-indent:.34em; color:rgba(228,232,240,.42);
+              text-transform:uppercase; }
+  #cue i { position:relative; display:block; width:1px; height:44px;
+           background:rgba(228,232,240,.14); overflow:hidden; }
+  #cue i::after { content:""; position:absolute; inset:0; background:rgba(228,232,240,.85);
+                  animation:fall 2.4s cubic-bezier(.7,0,.3,1) infinite; }
+  @keyframes fall { 0% { transform:translateY(-100%); } 55%,100% { transform:translateY(100%); } }
+
+  /* no WebGL: the mark, still */
+  #still { position:fixed; inset:0; display:none; place-items:center; background:#e6e6e6; z-index:3; }
+  #still svg { width:min(30vmin,240px); height:auto; fill:#231f20; }
+  body.still #still { display:grid; }
+  body.still #cue, body.still canvas#gl { display:none; }
+
+  @media (prefers-reduced-motion: reduce) {
+    #cue { display:none; }
+    #cue i::after { animation:none; }
+  }
+</style>
+</head>
+<body>
+  <h1 class="sr">Ncarnate Labs</h1>
+  <canvas id="gl"></canvas>
+  <div id="scroll_track"></div>
+  <div id="cue" aria-hidden="true"><span>Scroll</span><i></i></div>
+  <div id="still" aria-hidden="true"></div>
+  <div id="hud"></div>
+  <script type="module" src="./main.js"></script>
+</body>
+</html>

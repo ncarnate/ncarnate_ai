@@ -1,4 +1,5 @@
-assets/.DS_Store
 .DS_Store
-blog/node_modules
-blog/_site
+node_modules
+# The previous site is preserved locally only. It is deliberately not published:
+# ncarnate.ai is the pre-launch page and nothing else should be reachable.
+_archive/
