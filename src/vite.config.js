@@ -51,7 +51,7 @@ function serveEntryAtRoot() {
 export default defineConfig({
   base: './',
   plugins: [glsl({ compress: false }), serveEntryAtRoot(), buildSinglePage()],
-  server: { port: 5180, strictPort: true },
+  server: { port: 5181, strictPort: true },
   // Built straight into the repository root, which is what GitHub Pages serves.
   build: {
     outDir: '..', emptyOutDir: false, target: 'es2020',

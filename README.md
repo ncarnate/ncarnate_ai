@@ -205,9 +205,15 @@ Node 22 via `.nvmrc`.
 - Dust: 700 additively-blended point sprites, positions integrated in the
   *vertex* shader from a per-mote seed. GPGPU is the right tool an order of
   magnitude further up; at this density it is ceremony.
-- One render target chain. Mask → scene → bright pass at ¼ res → separable
-  9-tap blur → composite. Fold bloom, chromatic aberration, grain and vignette
-  into that single composite pass — do not chain a pass per effect.
+- One render target chain, all of it half-float. Mask → scene → soft-knee
+  prefilter at ½ res → dual-filter downsample to 1/32 → tent upsample, adding
+  each level back → composite. Fold bloom, chromatic aberration, highlight
+  shoulder, grain, vignette and the final dither into that single composite
+  pass — do not chain a pass per effect. The buffers are 16-bit float because
+  the piece is faint gradients on near-black: in 8-bit they collapse into
+  1/255 plateaus (rings around every light), and noise added afterwards cannot
+  undo a step already taken. The one 8-bit write left, the canvas, gets a
+  triangular-PDF dither at one LSB.
 - A slow camera runs under everything: the field starts rotated ~4.5° and
   zoomed in, and rectifies onto the axis exactly as the mark settles. It is
   what keeps the long construction beats from reading as static, and it makes
@@ -348,9 +354,9 @@ src/
   scene.js              boot(): passes, six-beat timeline, scroll rig, frame loop
   geometry.json         resolved artwork — transforms baked out of the source SVG
   lib/artwork.js        geometry.json -> lines, nodes, lattice buffers, mark polygons
-  shaders/              fullscreen.vert artwork.vert dust.vert
+  shaders/              fullscreen.vert lattice.vert dust.vert
                         field.frag mark.frag lattice.frag dust.frag
-                        bright.frag blur.frag composite.frag
+                        prefilter.frag down.frag up.frag composite.frag
   vite.config.js        glsl imports; folds the chunk in and emits ../index.html
   .nvmrc                22
 ```
@@ -376,10 +382,11 @@ and buffer size.
 | mark | full res | one fullscreen quad, 12-segment exact polygon SDF → coverage + distance in/out |
 | field | full res | 12 analytic line SDFs, 4 nodes, the seed, ground mix, the coalescence |
 | dust | full res | 700 additive point sprites |
-| lattice | full res | 4 574 GPU line vertices carrying `(element, arcLength)` |
-| bright | ¼ res | threshold above the ground's own luminance |
-| blur ×2 | ¼ res | separable 9-tap |
-| composite | screen | bloom + velocity-scaled chromatic aberration + grain + vignette |
+| lattice | full res | 2 287 screen-space quads, analytically antialiased, carrying `(element, arcLength)` |
+| prefilter | ½ res | 4×4 box + soft-knee threshold above the ground's own luminance |
+| down ×4 | ¼ … 1/32 | dual-filter (Bjørge 2015) |
+| up ×4 | 1/16 … ½ | 3×3 tent, each level added back |
+| composite | screen | bloom + velocity-scaled chromatic aberration + highlight shoulder + grain + vignette + TPDF dither |
 
 **Deliberate departures from the brief**, all in §4 and §7 with reasons: the
 mark's SDF is analytic rather than a baked texture; dust is vertex-shader point

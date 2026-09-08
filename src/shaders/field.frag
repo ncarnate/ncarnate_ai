@@ -29,6 +29,7 @@ uniform sampler2D tMask;   // r = coverage, g = distance outside, b = depth insi
 uniform float uMarkReveal; // 0..1 — light concentrates into the mark
 uniform float uMarkSolid;  // 0..1 — the mark settles to solid ink
 uniform float uSeed;       // 0..1 — beat 1's single point of light
+uniform float uDither;     // 1 when the scene buffer is 8-bit and needs dithering
 
 const vec3 INK   = vec3(0.137, 0.122, 0.125);   // #231f20
 const vec3 RED   = vec3(0.761, 0.039, 0.161);   // #c20a29, the brand ink
@@ -74,8 +75,12 @@ void main() {
   if (uSeed > 0.001) {
     float ds = length(p - uLines[0].xy);
     float pulse = 0.78 + 0.22 * sin(uTime * 1.35);
-    col += vec3(0.66, 0.70, 0.82) * uSeed * pulse *
-           ((1.0 - smoothstep(0.0, 2.6, ds)) * 0.55 + exp(-ds * 0.055) * 0.085);
+    // a hot core, a near glow, and a long inverse-square skirt: the profile of
+    // a real point source, which is why it reads as a star and not a dot
+    float star = (1.0 - smoothstep(0.0, 2.6, ds)) * 0.55
+               + exp(-ds * 0.055) * 0.085
+               + 0.030 / (1.0 + (ds * ds) * (1.0 / 900.0));
+    col += vec3(0.66, 0.70, 0.82) * uSeed * pulse * star;
   }
 
   // --- 12 construction lines ---------------------------------------------
@@ -114,7 +119,7 @@ void main() {
   // outside the mark the field drains, but not to nothing: it pools against
   // the silhouette first, so the N is felt as a shape before it is one.
   float outside = 0.10 + 0.62 * halo;
-  float sel = mix(1.0, mix(outside, 1.85, mask), uMarkReveal);
+  float sel = mix(1.0, mix(outside, 1.45, mask), uMarkReveal);
   lineAcc = min(lineAcc * sel, 2.2) * uInkFade;
   headAcc = min(headAcc, 1.6) * uInkFade;
 
@@ -150,13 +155,20 @@ void main() {
   // only ever reads where construction lines happened to cross it — and its
   // edge catches a rim off the distance field.
   float body = mask * uMarkReveal * (1.0 - uGround) * (1.0 - uMarkSolid * 0.35);
-  col += vec3(0.42, 0.45, 0.55) * body;
-  float rim = mask * exp(-md.b * 8.5) * uMarkReveal * (1.0 - uMarkSolid * 0.8);
-  col += vec3(0.80, 0.84, 0.94) * rim * 0.42;
+  col += vec3(0.54, 0.56, 0.63) * body;
+  float rim = mask * exp(-md.b * 5.5) * uMarkReveal * (1.0 - uMarkSolid * 0.8);
+  col += vec3(0.80, 0.84, 0.94) * rim * 0.26;
 
   // the mark settles: light on the void, ink once the ground has lifted
   vec3 markCol = mix(vec3(0.93, 0.94, 0.96), INK, uGround);
   col = mix(col, markCol, clamp(mask * uMarkSolid, 0.0, 1.0));
 
+  // Float buffers carry these gradients intact. Without them, dither the
+  // write itself — noise added after quantisation cannot undo a step.
+  if (uDither > 0.5) {
+    float n = fract(52.9829189 * fract(0.06711056 * frag.x + 0.00583715 * frag.y + uTime * 0.37));
+    float v = n * 2.0 - 1.0;
+    col += sign(v) * (1.0 - sqrt(1.0 - abs(v))) * (1.0 / 255.0);
+  }
   gl_FragColor = vec4(col, 1.0);
 }

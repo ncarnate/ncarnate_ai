@@ -4,14 +4,15 @@ import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
 
 import fullscreenVert from './shaders/fullscreen.vert';
-import artworkVert from './shaders/artwork.vert';
+import latticeVert from './shaders/lattice.vert';
 import fieldFrag from './shaders/field.frag';
 import markFrag from './shaders/mark.frag';
 import dustVert from './shaders/dust.vert';
 import dustFrag from './shaders/dust.frag';
 import latticeFrag from './shaders/lattice.frag';
-import brightFrag from './shaders/bright.frag';
-import blurFrag from './shaders/blur.frag';
+import prefilterFrag from './shaders/prefilter.frag';
+import downFrag from './shaders/down.frag';
+import upFrag from './shaders/up.frag';
 import compositeFrag from './shaders/composite.frag';
 import { buildLines, buildNodes, buildLattice, buildMarkSegments, ART_CENTRE } from './lib/artwork.js';
 
@@ -24,7 +25,7 @@ export function boot() {
 
   const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   const SCROLL_VH = 620;
-  const BLOOM_DIV = 4;
+  const BLOOM_LEVELS = 5;  // 1/2 .. 1/32 of the frame
   const MARK_DIST = 300;   // artwork units mapped to 1.0 outside the mark
   const DUST_COUNT = 700;
   const MARK_CORE = 120;   // and inside it
@@ -37,6 +38,14 @@ export function boot() {
   });
   const gl = renderer.gl;
   gl.clearColor(0, 0, 0, 1);
+
+  // Every intermediate buffer is half-float where the hardware allows it. The
+  // piece is faint gradients on near-black; in 8-bit those collapse into
+  // 1/255 plateaus — concentric rings around every light — and no amount of
+  // noise added afterwards can undo a step that has already been taken. With
+  // 16-bit floats the only quantisation left is the final write to the
+  // canvas, and that one is dithered.
+  const HDR = pickHdrFormat(gl, renderer.isWebgl2);
 
   // ---------------------------------------------------------------------------
   // artwork
@@ -77,8 +86,10 @@ export function boot() {
   // ---------------------------------------------------------------------------
   // render targets
   // ---------------------------------------------------------------------------
-  const rtOpts = { depth: false, generateMipmaps: false };
-  let maskRT, sceneRT, brightRT, blurRT;
+  const rtOpts = { depth: false, generateMipmaps: false, ...(HDR || {}) };
+  let maskRT, sceneRT;
+  const down = [];   // BLOOM_LEVELS render targets, 1/2 .. 1/2^n
+  const up = [];     // BLOOM_LEVELS - 1, the accumulated walk back up
 
   // ---------------------------------------------------------------------------
   // passes
@@ -123,16 +134,23 @@ export function boot() {
   });
   dustMesh.program.setBlendFunc(gl.ONE, gl.ONE);
 
+  // The lattice is drawn as screen-space quads and antialiased in the fragment
+  // stage; the stroke stays a hairline at every pixel density.
   const latticeMesh = new Mesh(gl, {
-    mode: gl.LINES,
     geometry: new Geometry(gl, {
-      position: { size: 2, data: lattice.position },
+      pa: { size: 2, data: lattice.pa },
+      pb: { size: 2, data: lattice.pb },
       meta: { size: 2, data: lattice.meta },
+      corner: { size: 2, data: lattice.corner },
+      index: { data: lattice.index },
     }),
     program: new Program(gl, {
-      vertex: artworkVert, fragment: latticeFrag,
+      vertex: latticeVert, fragment: latticeFrag,
       transparent: true, cullFace: null, depthTest: false, depthWrite: false,
-      uniforms: { ...view, uProgress: { value: uLatticeProg }, uFade: { value: 1 }, uGround: { value: 0 } },
+      uniforms: {
+        ...view, uProgress: { value: uLatticeProg }, uFade: { value: 1 }, uGround: { value: 0 },
+        uWidth: { value: Math.max(1, 0.7 * renderer.dpr) },
+      },
     }),
   });
 
@@ -145,29 +163,45 @@ export function boot() {
       uGround: { value: 0 }, uInkFade: { value: 1 }, uVel: { value: 0 },
       tMask: { value: null }, uMarkReveal: { value: 0 }, uMarkSolid: { value: 0 },
       uSeed: { value: 1 },
+      uDither: { value: HDR ? 0 : 1 },
     },
   });
   const fieldMesh = new Mesh(gl, { geometry: new Triangle(gl), program: fieldProgram });
 
+  // Bloom is a mip chain: a soft-knee prefilter into the half-res level, a
+  // dual-filter downsample to 1/32, then a tent upsample that adds each level
+  // back on the way up. The sum of scales is what gives a hot point a tight
+  // core and a wide skirt with no kernel edge anywhere in it.
   const quad = new Triangle(gl);
-  const brightProgram = new Program(gl, {
-    vertex: fullscreenVert, fragment: brightFrag,
-    uniforms: { tScene: { value: null }, uThreshold: { value: 0.16 }, uBase: { value: 0 } },
+  const prefilterProgram = new Program(gl, {
+    vertex: fullscreenVert, fragment: prefilterFrag,
+    uniforms: {
+      tScene: { value: null }, uTexel: { value: new Float32Array([0, 0]) },
+      uBase: { value: 0 }, uThreshold: { value: 0.14 }, uKnee: { value: 0.10 },
+    },
   });
-  const blurProgram = new Program(gl, {
-    vertex: fullscreenVert, fragment: blurFrag,
-    uniforms: { tSrc: { value: null }, uDir: { value: new Float32Array([0, 0]) } },
+  const downProgram = new Program(gl, {
+    vertex: fullscreenVert, fragment: downFrag,
+    uniforms: { tSrc: { value: null }, uTexel: { value: new Float32Array([0, 0]) } },
+  });
+  const upProgram = new Program(gl, {
+    vertex: fullscreenVert, fragment: upFrag,
+    uniforms: {
+      tSrc: { value: null }, tAdd: { value: null },
+      uTexel: { value: new Float32Array([0, 0]) }, uRadius: { value: 1.0 },
+    },
   });
   const compositeProgram = new Program(gl, {
     vertex: fullscreenVert, fragment: compositeFrag,
     uniforms: {
       tScene: { value: null }, tBloom: { value: null },
-      uResolution: view.uResolution, uTime: { value: 0 },
-      uVel: { value: 0 }, uBloom: { value: 0.62 }, uGround: { value: 0 },
+      uResolution: view.uResolution, uTime: { value: 0 }, uFrame: { value: 0 },
+      uVel: { value: 0 }, uBloom: { value: 0.30 }, uGround: { value: 0 },
     },
   });
-  const brightMesh = new Mesh(gl, { geometry: quad, program: brightProgram });
-  const blurMesh = new Mesh(gl, { geometry: quad, program: blurProgram });
+  const prefilterMesh = new Mesh(gl, { geometry: quad, program: prefilterProgram });
+  const downMesh = new Mesh(gl, { geometry: quad, program: downProgram });
+  const upMesh = new Mesh(gl, { geometry: quad, program: upProgram });
   const compositeMesh = new Mesh(gl, { geometry: quad, program: compositeProgram });
 
   const emptyScene = new Transform();
@@ -187,16 +221,20 @@ export function boot() {
     const markShare = w < 700 ? 0.46 : 0.34;
     baseScale = ((Math.min(w, h) * markShare) / 360) * renderer.dpr;
 
-    [maskRT, sceneRT, brightRT, blurRT].forEach((rt) => {
+    [maskRT, sceneRT, ...down, ...up].forEach((rt) => {
       if (!rt) return;
       if (rt.texture) gl.deleteTexture(rt.texture.texture);
       if (rt.buffer) gl.deleteFramebuffer(rt.buffer);
     });
+    down.length = 0; up.length = 0;
     maskRT = new RenderTarget(gl, { width: bw, height: bh, ...rtOpts });
     sceneRT = new RenderTarget(gl, { width: bw, height: bh, ...rtOpts });
-    const bwq = Math.max(1, Math.floor(bw / BLOOM_DIV)), bhq = Math.max(1, Math.floor(bh / BLOOM_DIV));
-    brightRT = new RenderTarget(gl, { width: bwq, height: bhq, ...rtOpts });
-    blurRT = new RenderTarget(gl, { width: bwq, height: bhq, ...rtOpts });
+    for (let i = 0; i < BLOOM_LEVELS; i++) {
+      const s = 2 ** (i + 1);
+      const w = Math.max(1, Math.round(bw / s)), h = Math.max(1, Math.round(bh / s));
+      down.push(new RenderTarget(gl, { width: w, height: h, ...rtOpts }));
+      if (i < BLOOM_LEVELS - 1) up.push(new RenderTarget(gl, { width: w, height: h, ...rtOpts }));
+    }
 
     document.querySelector('#scroll_track').style.height = REDUCED ? '100vh' : `${SCROLL_VH}vh`;
     ScrollTrigger.refresh();
@@ -305,7 +343,7 @@ export function boot() {
   const hud = document.querySelector('#hud');
   const showHud = new URLSearchParams(location.search).has('hud');
   if (showHud) hud.classList.add('on');
-  let frames = 0, acc = 0, worst = 0, last = performance.now();
+  let frames = 0, acc = 0, worst = 0, last = performance.now(), frameNo = 0;
 
   function frame(now) {
     const dt = Math.min(now - last, 100); last = now;
@@ -336,7 +374,7 @@ export function boot() {
     latticeMesh.program.uniforms.uFade.value = state.latticeFade * state.ink;
     latticeMesh.program.uniforms.uGround.value = state.ground;
     // ground luminance, so the bright pass measures only what exceeds the page
-    brightProgram.uniforms.uBase.value = 0.041 + state.ground * 0.861;
+    prefilterProgram.uniforms.uBase.value = 0.041 + state.ground * 0.861;
 
     // 1. mark coverage
     renderer.render({ scene: markMesh, target: maskRT, clear: true });
@@ -344,21 +382,30 @@ export function boot() {
     renderer.render({ scene: fieldMesh, target: sceneRT, clear: true });
     renderer.render({ scene: dustMesh, target: sceneRT, clear: false });
     renderer.render({ scene: latticeMesh, target: sceneRT, clear: false });
-    // 3. bloom: bright pass at quarter res, separable blur
-    brightProgram.uniforms.tScene.value = sceneRT.texture;
-    renderer.render({ scene: brightMesh, target: brightRT, clear: true });
-    blurProgram.uniforms.tSrc.value = brightRT.texture;
-    blurProgram.uniforms.uDir.value[0] = 1 / brightRT.width;
-    blurProgram.uniforms.uDir.value[1] = 0;
-    renderer.render({ scene: blurMesh, target: blurRT, clear: true });
-    blurProgram.uniforms.tSrc.value = blurRT.texture;
-    blurProgram.uniforms.uDir.value[0] = 0;
-    blurProgram.uniforms.uDir.value[1] = 1 / brightRT.height;
-    renderer.render({ scene: blurMesh, target: brightRT, clear: true });
+    // 3. bloom: prefilter into 1/2, dual-filter down to 1/32, tent back up
+    prefilterProgram.uniforms.tScene.value = sceneRT.texture;
+    prefilterProgram.uniforms.uTexel.value[0] = 1 / sceneRT.width;
+    prefilterProgram.uniforms.uTexel.value[1] = 1 / sceneRT.height;
+    renderer.render({ scene: prefilterMesh, target: down[0], clear: true });
+    for (let i = 1; i < BLOOM_LEVELS; i++) {
+      downProgram.uniforms.tSrc.value = down[i - 1].texture;
+      downProgram.uniforms.uTexel.value[0] = 1 / down[i - 1].width;
+      downProgram.uniforms.uTexel.value[1] = 1 / down[i - 1].height;
+      renderer.render({ scene: downMesh, target: down[i], clear: true });
+    }
+    for (let i = BLOOM_LEVELS - 2; i >= 0; i--) {
+      const coarse = i === BLOOM_LEVELS - 2 ? down[i + 1] : up[i + 1];
+      upProgram.uniforms.tSrc.value = coarse.texture;
+      upProgram.uniforms.tAdd.value = down[i].texture;
+      upProgram.uniforms.uTexel.value[0] = 1 / coarse.width;
+      upProgram.uniforms.uTexel.value[1] = 1 / coarse.height;
+      renderer.render({ scene: upMesh, target: up[i], clear: true });
+    }
     // 4. composite to screen
     compositeProgram.uniforms.tScene.value = sceneRT.texture;
-    compositeProgram.uniforms.tBloom.value = brightRT.texture;
+    compositeProgram.uniforms.tBloom.value = up[0].texture;
     compositeProgram.uniforms.uTime.value = now * 0.001;
+    compositeProgram.uniforms.uFrame.value = frameNo++;
     compositeProgram.uniforms.uVel.value = vel;
     compositeProgram.uniforms.uGround.value = state.ground;
     renderer.render({ scene: compositeMesh });
@@ -378,8 +425,44 @@ export function boot() {
   requestAnimationFrame(frame);
 
   // verification handle — the sequence cannot be checked from the DOM
-  window.__n = { timeline, state, cam, renderer, view, fieldProgram,
-                 uLineMeta, uNodes, uLatticeProg,
+  window.__n = { timeline, state, cam, renderer, view, fieldProgram, compositeProgram,
+                 uLineMeta, uNodes, uLatticeProg, hdr: !!HDR,
                  counts: { lattice: lattice.count, mark: mark.count } };
 
+}
+
+/**
+ * A renderable, linearly-filterable 16-bit float RGBA format, or null if the
+ * context has none. Checks the framebuffer actually completes rather than
+ * trusting the extension list: some mobile drivers advertise one and refuse
+ * the other.
+ */
+function pickHdrFormat(gl, isWebgl2) {
+  let fmt = null;
+  if (isWebgl2) {
+    if (gl.getExtension('EXT_color_buffer_half_float') || gl.getExtension('EXT_color_buffer_float')) {
+      fmt = { type: gl.HALF_FLOAT, internalFormat: gl.RGBA16F, format: gl.RGBA };
+    }
+  } else {
+    const hf = gl.getExtension('OES_texture_half_float');
+    if (hf && gl.getExtension('EXT_color_buffer_half_float') && gl.getExtension('OES_texture_half_float_linear')) {
+      fmt = { type: hf.HALF_FLOAT_OES, internalFormat: gl.RGBA, format: gl.RGBA };
+    }
+  }
+  if (!fmt) return null;
+
+  const tex = gl.createTexture();
+  const fb = gl.createFramebuffer();
+  gl.bindTexture(gl.TEXTURE_2D, tex);
+  gl.texImage2D(gl.TEXTURE_2D, 0, fmt.internalFormat, 4, 4, 0, fmt.format, fmt.type, null);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+  gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+  gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
+  gl.framebufferTexture2D(gl.FRAMEBUFFER, gl.COLOR_ATTACHMENT0, gl.TEXTURE_2D, tex, 0);
+  const ok = gl.checkFramebufferStatus(gl.FRAMEBUFFER) === gl.FRAMEBUFFER_COMPLETE;
+  gl.bindFramebuffer(gl.FRAMEBUFFER, null);
+  gl.bindTexture(gl.TEXTURE_2D, null);
+  gl.deleteFramebuffer(fb);
+  gl.deleteTexture(tex);
+  return ok ? fmt : null;
 }
