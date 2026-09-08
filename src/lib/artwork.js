@@ -41,8 +41,11 @@ export function buildNodes() {
  * can propagate per-shape without any per-pixel cost.
  */
 export function buildLattice() {
-  const position = [];
-  const meta = []; // (elementIndex, alongNormalised)
+  // Each segment becomes a quad the vertex shader widens in screen space, so
+  // the lattice is antialiased analytically like everything else in the frame
+  // — GL_LINES hairlines cannot be, and stair-step on every diagonal at 1x.
+  const pa = [], pb = [], meta = [], corner = [], index = [];
+  let seg = 0;
   geometry.lattice.forEach((el, ei) => {
     const pts = el.pts;
     // cumulative arc length for an even reveal regardless of sampling density
@@ -52,14 +55,26 @@ export function buildLattice() {
     }
     const total = cum[cum.length - 1] || 1;
     for (let i = 0; i < pts.length - 1; i++) {
-      position.push(pts[i][0], pts[i][1], pts[i + 1][0], pts[i + 1][1]);
-      meta.push(ei, cum[i] / total, ei, cum[i + 1] / total);
+      const a = pts[i], b = pts[i + 1];
+      // four corners: (which end, which side)
+      for (const [end, side] of [[0, -1], [0, 1], [1, -1], [1, 1]]) {
+        pa.push(a[0], a[1]);
+        pb.push(b[0], b[1]);
+        meta.push(ei, cum[i + end] / total);
+        corner.push(end, side);
+      }
+      const v = seg * 4;
+      index.push(v, v + 1, v + 2, v + 2, v + 1, v + 3);
+      seg++;
     }
   });
   return {
-    position: new Float32Array(position),
+    pa: new Float32Array(pa),
+    pb: new Float32Array(pb),
     meta: new Float32Array(meta),
-    count: position.length / 2,
+    corner: new Float32Array(corner),
+    index: new Uint16Array(index),
+    count: seg,
     elements: geometry.lattice.length,
   };
 }

@@ -23,7 +23,9 @@ root, so anything committed is visible one way or another.
     rig, frame loop. Exports `boot()` and has no side effects on import.
   - `geometry.json` — the artwork with its transforms resolved.
   - `lib/artwork.js` — geometry.json to GPU buffers and mark polygons.
-  - `shaders/` — ten GLSL files, imported by `vite-plugin-glsl`.
+  - `shaders/` — eleven GLSL files, imported by `vite-plugin-glsl`. Every
+    intermediate buffer is half-float and the only 8-bit write (the canvas)
+    is dithered; keep it that way, or the dark gradients band.
 - `.nojekyll` — Pages serves the files as they are, with no Jekyll step. Keep
   it; the build has no need of one.
 - `CNAME` — pins the custom domain. Never touch without coordinating DNS.
