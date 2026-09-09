@@ -1,4 +1,4 @@
-import { Renderer, Program, Mesh, Triangle, Geometry, RenderTarget, Transform } from 'ogl';
+import { Renderer, Program, Mesh, Triangle, Geometry, RenderTarget } from 'ogl';
 import { gsap } from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import Lenis from 'lenis';
@@ -14,16 +14,23 @@ import prefilterFrag from './shaders/prefilter.frag';
 import downFrag from './shaders/down.frag';
 import upFrag from './shaders/up.frag';
 import compositeFrag from './shaders/composite.frag';
-import { buildLines, buildNodes, buildLattice, buildMarkSegments, ART_CENTRE } from './lib/artwork.js';
+import {
+  buildLines, buildNodes, buildLattice, buildMarkSegments, ART_CENTRE,
+} from './lib/artwork.js';
 
 /**
  * The whole piece. Called only once a WebGL context is known to be available,
  * so importing this module has no side effects of its own.
  */
-export function boot() {
+export function boot({ progress = 0 } = {}) {
   gsap.registerPlugin(ScrollTrigger);
 
-  const REDUCED = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  // This page owns layout refreshes; library listeners must not independently
+  // refresh the timeline when Safari hides a toolbar or a tab becomes visible.
+  ScrollTrigger.config({ ignoreMobileResize: true, autoRefreshEvents: 'none' });
+  const motionQuery = window.matchMedia('(prefers-reduced-motion: reduce)');
+  const touchQuery = window.matchMedia('(pointer: coarse)');
+  let reduced = motionQuery.matches;
   const SCROLL_VH = 620;
   const BLOOM_LEVELS = 5;  // 1/2 .. 1/32 of the frame
   const MARK_DIST = 300;   // artwork units mapped to 1.0 outside the mark
@@ -32,20 +39,21 @@ export function boot() {
 
   const canvas = document.querySelector('#gl');
   const renderer = new Renderer({
-    canvas, alpha: false, antialias: false,
+    canvas, alpha: false, antialias: false, depth: false,
     dpr: Math.min(window.devicePixelRatio, 2),
     powerPreference: 'high-performance',
   });
   const gl = renderer.gl;
   gl.clearColor(0, 0, 0, 1);
 
-  // Every intermediate buffer is half-float where the hardware allows it. The
-  // piece is faint gradients on near-black; in 8-bit those collapse into
+  // Every intermediate buffer is half-float; unsupported hardware gets the still.
+  // The piece is faint gradients on near-black; in 8-bit those collapse into
   // 1/255 plateaus — concentric rings around every light — and no amount of
   // noise added afterwards can undo a step that has already been taken. With
   // 16-bit floats the only quantisation left is the final write to the
   // canvas, and that one is dithered.
   const HDR = pickHdrFormat(gl, renderer.isWebgl2);
+  if (!HDR) throw new Error('A renderable half-float target is required');
 
   // ---------------------------------------------------------------------------
   // artwork
@@ -204,42 +212,85 @@ export function boot() {
   const upMesh = new Mesh(gl, { geometry: quad, program: upProgram });
   const compositeMesh = new Mesh(gl, { geometry: quad, program: compositeProgram });
 
-  const emptyScene = new Transform();
-
   // ---------------------------------------------------------------------------
   // layout
   // ---------------------------------------------------------------------------
-  function resize() {
-    const w = window.innerWidth, h = window.innerHeight;
-    renderer.setSize(w, h);
-    const bw = gl.drawingBufferWidth, bh = gl.drawingBufferHeight;
-    view.uResolution.value[0] = bw;
-    view.uResolution.value[1] = bh;
+  const track = document.querySelector('#scroll_track');
+  const layout = { width: 0, height: 0, distance: 0, resizes: 0, refreshes: 0 };
+  let lenis = null, trigger = null, resizeTimer = 0;
 
-    // Composition reflows: the mark keeps a stable share of the smaller axis and
-    // the infinite construction lines fill whatever is left.
-    const markShare = w < 700 ? 0.46 : 0.34;
-    baseScale = ((Math.min(w, h) * markShare) / 360) * renderer.dpr;
-
-    [maskRT, sceneRT, ...down, ...up].forEach((rt) => {
-      if (!rt) return;
-      if (rt.texture) gl.deleteTexture(rt.texture.texture);
-      if (rt.buffer) gl.deleteFramebuffer(rt.buffer);
-    });
-    down.length = 0; up.length = 0;
-    maskRT = new RenderTarget(gl, { width: bw, height: bh, ...rtOpts });
-    sceneRT = new RenderTarget(gl, { width: bw, height: bh, ...rtOpts });
-    for (let i = 0; i < BLOOM_LEVELS; i++) {
-      const s = 2 ** (i + 1);
-      const w = Math.max(1, Math.round(bw / s)), h = Math.max(1, Math.round(bh / s));
-      down.push(new RenderTarget(gl, { width: w, height: h, ...rtOpts }));
-      if (i < BLOOM_LEVELS - 1) up.push(new RenderTarget(gl, { width: w, height: h, ...rtOpts }));
-    }
-
-    document.querySelector('#scroll_track').style.height = REDUCED ? '100vh' : `${SCROLL_VH}vh`;
-    ScrollTrigger.refresh();
+  function sizeTrack() {
+    // The scroll distance is stable, but its tail follows the visible viewport.
+    // Thus the last native scroll pixel always reaches rest, even with bars open.
+    track.style.height = reduced ? '0px' : `${layout.distance + window.innerHeight}px`;
   }
-  window.addEventListener('resize', resize);
+
+  function resize(preserveProgress = true) {
+    const w = window.innerWidth, h = canvas.clientHeight;
+    const pixelBudget = touchQuery.matches ? 2000000 : Infinity;
+    const dpr = Math.min(window.devicePixelRatio || 1, 2, Math.sqrt(pixelBudget / (w * h)));
+    sizeTrack();
+    if (w === layout.width && h === layout.height && dpr === renderer.dpr) return false;
+
+    const position = preserveProgress && trigger ? trigger.progress : progress;
+    renderer.dpr = dpr;
+    renderer.setSize(w, h);
+    // OGL writes pixel styles; CSS, not the drawing buffer, owns viewport sizing.
+    canvas.style.width = '';
+    canvas.style.height = '';
+    const bw = gl.drawingBufferWidth, bh = gl.drawingBufferHeight;
+    view.uResolution.value.set([bw, bh]);
+    dustMesh.program.uniforms.uDpr.value = dpr;
+    fieldProgram.uniforms.uDpr.value = dpr;
+    latticeMesh.program.uniforms.uWidth.value = Math.max(1, 0.7 * dpr);
+
+    // Keep the approved desktop and mobile composition shares exactly as drawn.
+    const markShare = w < 700 ? 0.46 : 0.34;
+    baseScale = ((Math.min(w, h) * markShare) / 360) * dpr;
+    if (!maskRT) {
+      maskRT = new RenderTarget(gl, { width: bw, height: bh, ...rtOpts });
+      sceneRT = new RenderTarget(gl, { width: bw, height: bh, ...rtOpts });
+      for (let i = 0; i < BLOOM_LEVELS; i++) {
+        const width = Math.max(1, Math.round(bw / 2 ** (i + 1)));
+        const height = Math.max(1, Math.round(bh / 2 ** (i + 1)));
+        down.push(new RenderTarget(gl, { width, height, ...rtOpts }));
+        if (i < BLOOM_LEVELS - 1) {
+          up.push(new RenderTarget(gl, { width, height, ...rtOpts }));
+        }
+      }
+    }
+    // Reuse framebuffer/texture objects. A real resize changes storage once;
+    // address-bar motion never enters this branch or clears the drawing buffer.
+    maskRT.setSize(bw, bh);
+    sceneRT.setSize(bw, bh);
+    down.forEach((rt, i) => {
+      const width = Math.max(1, Math.round(bw / 2 ** (i + 1)));
+      const height = Math.max(1, Math.round(bh / 2 ** (i + 1)));
+      rt.setSize(width, height);
+      up[i]?.setSize(width, height);
+    });
+    Object.assign(layout, { width: w, height: h, distance: h * (SCROLL_VH / 100 - 1) });
+    layout.resizes++;
+    sizeTrack();
+    lenis?.resize();
+    if (trigger) {
+      trigger.refresh();
+      layout.refreshes++;
+      seek(position);
+    }
+    return true;
+  }
+
+  function scheduleResize() {
+    sizeTrack();
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      if (document.hidden || destroyed) return;
+      if (resize()) renderStill();
+    }, 160);
+  }
+  window.addEventListener('resize', scheduleResize, { passive: true });
+  window.addEventListener('orientationchange', scheduleResize, { passive: true });
 
   // ---------------------------------------------------------------------------
   // the six beats
@@ -296,46 +347,87 @@ export function boot() {
   // scroll
   // ---------------------------------------------------------------------------
   let velocity = 0;
-  if (!REDUCED) {
-    const lenis = new Lenis({ lerp: 0.085, wheelMultiplier: 0.9, smoothWheel: true });
-    lenis.on('scroll', (e) => { velocity = e.velocity; });
-    gsap.ticker.add((t) => lenis.raf(t * 1000));
-    gsap.ticker.lagSmoothing(0);
-    ScrollTrigger.create({
-      trigger: '#scroll_track', start: 'top top', end: 'bottom bottom', scrub: 0.35,
-      onUpdate: (self) => timeline.progress(self.progress),
-    });
-  } else {
-    timeline.progress(1);
+  const cue = document.querySelector('#cue');
+  let cueGone = progress > 0, cueTimer = 0;
+
+  function retireCue() {
+    if (cueGone || timeline.progress() < 0.006) return;
+    cueGone = true;
+    clearTimeout(cueTimer);
+    cue.classList.remove('on');
   }
 
-  // The cue arrives a beat after the void does, and leaves the moment it is
-  // answered. It never comes back.
-  const cue = document.querySelector('#cue');
-  if (!REDUCED) {
-    let cueShown = false, cueGone = false;
-    setTimeout(() => { if (!cueGone) { cue.classList.add('on'); cueShown = true; } }, 1400);
-    const retire = () => {
-      if (cueGone || timeline.progress() < 0.006) return;
-      cueGone = true;
+  function seek(position) {
+    const y = position * layout.distance;
+    if (lenis) lenis.scrollTo(y, { immediate: true, force: true });
+    else window.scrollTo(0, y);
+    ScrollTrigger.update();
+    trigger?.getTween()?.progress(1);
+    timeline.progress(reduced ? 1 : position);
+    velocity = 0;
+  }
+
+  function configureScroll(position = 0) {
+    trigger?.kill();
+    lenis?.destroy();
+    trigger = lenis = null;
+    document.body.classList.toggle('reduced', reduced);
+    sizeTrack();
+    if (reduced) {
+      window.scrollTo(0, 0);
+      timeline.progress(1);
       cue.classList.remove('on');
-      if (!cueShown) cue.style.display = 'none';
-      gsap.ticker.remove(retire);
-    };
-    gsap.ticker.add(retire);
+      clearTimeout(cueTimer);
+      return;
+    }
+    // Touch belongs to the browser: native momentum, pinch zoom and swipe-back.
+    // Only wheel input needs Lenis; there is no second touch-inertia simulation.
+    if (!touchQuery.matches) {
+      lenis = new Lenis({
+        lerp: 0.085, wheelMultiplier: 0.9, smoothWheel: true,
+        syncTouch: false, autoResize: false,
+      });
+      lenis.on('scroll', (event) => {
+        velocity = event.velocity;
+        ScrollTrigger.update();
+      });
+    }
+    trigger = ScrollTrigger.create({
+      trigger: track, start: 0, end: () => layout.distance,
+      animation: timeline, scrub: 0.35,
+    });
+    layout.refreshes++;
+    seek(position);
+    if (!cueGone) {
+      clearTimeout(cueTimer);
+      cueTimer = setTimeout(() => {
+        if (!cueGone && !reduced && !document.hidden) cue.classList.add('on');
+      }, 1400);
+    }
   }
 
   // ---------------------------------------------------------------------------
-  // cursor parallax
+  // cursor parallax — touch gestures never become camera movement
   // ---------------------------------------------------------------------------
   const pointer = { tx: 0, ty: 0, x: 0, y: 0, idle: 0 };
-  if (!REDUCED) {
-    window.addEventListener('pointermove', (e) => {
-      pointer.tx = (e.clientX / window.innerWidth - 0.5) * 2;
-      pointer.ty = (e.clientY / window.innerHeight - 0.5) * 2;
-      pointer.idle = 0;
-    }, { passive: true });
+  function movePointer(event) {
+    if (reduced || event.pointerType !== 'mouse' || touchQuery.matches) return;
+    pointer.tx = (event.clientX / window.innerWidth - 0.5) * 2;
+    pointer.ty = (event.clientY / window.innerHeight - 0.5) * 2;
+    pointer.idle = 0;
   }
+  function keyboardScroll(event) {
+    // A keyboard command takes over from any wheel inertia immediately.
+    if (['Home', 'End', 'PageUp', 'PageDown', 'ArrowUp', 'ArrowDown', ' '].includes(event.key)) {
+      lenis?.reset();
+    }
+  }
+  window.addEventListener('keydown', keyboardScroll);
+  function resetPointer() {
+    pointer.tx = pointer.ty = 0;
+  }
+  window.addEventListener('pointermove', movePointer, { passive: true });
+  document.documentElement.addEventListener('pointerleave', resetPointer, { passive: true });
 
   // ---------------------------------------------------------------------------
   // loop
@@ -343,25 +435,50 @@ export function boot() {
   const hud = document.querySelector('#hud');
   const showHud = new URLSearchParams(location.search).has('hud');
   if (showHud) hud.classList.add('on');
-  let frames = 0, acc = 0, worst = 0, last = performance.now(), frameNo = 0;
+  let frames = 0, acc = 0, worst = 0, last = 0, frameNo = 0;
+  let rafId = 0, sceneTime = 0, destroyed = false;
+  let previousScroll = window.scrollY;
+  const metrics = { renders: 0, frameMs: 0, cpuMs: 0 };
 
   function frame(now) {
-    const dt = Math.min(now - last, 100); last = now;
+    rafId = 0;
+    if (destroyed || document.hidden || gl.isContextLost()) return;
+    const cpuStart = performance.now();
+    const rawDt = last ? now - last : 1000 / 60;
+    const dt = Math.max(0.01, Math.min(rawDt, 50));
+    last = now;
+    if (!reduced) sceneTime += dt;
+    lenis?.raf(sceneTime);
+    if (!lenis && !reduced) {
+      const delta = window.scrollY - previousScroll;
+      const target = delta * (1000 / 60) / dt;
+      velocity += (target - velocity) * (1 - Math.exp(-dt / 65));
+    }
+    previousScroll = window.scrollY;
+    // CSS collapses the track before a motion-query change event is delivered.
+    // Remember the last normal frame, not the resulting browser-clamped scroll.
+    if (!reduced && !motionQuery.matches) motionPosition = trigger?.progress ?? motionPosition;
+    retireCue();
 
-    pointer.idle += dt;
-    const drift = Math.min(pointer.idle / 3000, 1);
-    pointer.x += ((pointer.tx + Math.sin(now * 0.00019) * 0.30 * drift) - pointer.x) * 0.042;
-    pointer.y += ((pointer.ty + Math.cos(now * 0.00023) * 0.30 * drift) - pointer.y) * 0.042;
+    if (!reduced && !touchQuery.matches) {
+      pointer.idle += dt;
+      const drift = Math.min(pointer.idle / 3000, 1);
+      const damping = 1 - Math.pow(1 - 0.042, dt / (1000 / 60));
+      const driftX = Math.sin(sceneTime * 0.00019) * 0.30 * drift;
+      const driftY = Math.cos(sceneTime * 0.00023) * 0.30 * drift;
+      pointer.x += (pointer.tx + driftX - pointer.x) * damping;
+      pointer.y += (pointer.ty + driftY - pointer.y) * damping;
+    } else {
+      pointer.x = pointer.y = 0;
+    }
     view.uParallax.value[0] = pointer.x * 13;
     view.uParallax.value[1] = -pointer.y * 13;
-    // at rest the lockup breathes — far below the threshold of noticing, but
-    // the frame is never quite frozen
-    const rest = Math.max(0, (timeline.progress() - 0.962) / 0.038);
-    view.uScale.value = baseScale * cam.zoom * (1 + rest * Math.sin(now * 0.00042) * 0.0024);
+    const rest = reduced ? 0 : Math.max(0, (timeline.progress() - 0.962) / 0.038);
+    view.uScale.value = baseScale * cam.zoom * (1 + rest * Math.sin(sceneTime * 0.00042) * 0.0024);
     view.uRot.value = cam.rot;
 
     const vel = Math.min(Math.abs(velocity) / 34, 1);
-    fieldProgram.uniforms.uTime.value = now * 0.001;
+    fieldProgram.uniforms.uTime.value = sceneTime * 0.001;
     fieldProgram.uniforms.uGround.value = state.ground;
     fieldProgram.uniforms.uInkFade.value = state.ink;
     fieldProgram.uniforms.uVel.value = vel;
@@ -369,7 +486,7 @@ export function boot() {
     fieldProgram.uniforms.uMarkSolid.value = state.markSolid;
     fieldProgram.uniforms.uSeed.value = state.seed;
     fieldProgram.uniforms.tMask.value = maskRT.texture;
-    dustMesh.program.uniforms.uTime.value = now * 0.001;
+    dustMesh.program.uniforms.uTime.value = sceneTime * 0.001;
     dustMesh.program.uniforms.uFade.value = state.dust * (1 - state.ground);
     latticeMesh.program.uniforms.uFade.value = state.latticeFade * state.ink;
     latticeMesh.program.uniforms.uGround.value = state.ground;
@@ -404,30 +521,133 @@ export function boot() {
     // 4. composite to screen
     compositeProgram.uniforms.tScene.value = sceneRT.texture;
     compositeProgram.uniforms.tBloom.value = up[0].texture;
-    compositeProgram.uniforms.uTime.value = now * 0.001;
+    compositeProgram.uniforms.uTime.value = sceneTime * 0.001;
     compositeProgram.uniforms.uFrame.value = frameNo++;
     compositeProgram.uniforms.uVel.value = vel;
     compositeProgram.uniforms.uGround.value = state.ground;
     renderer.render({ scene: compositeMesh });
 
     if (showHud) {
-      frames++; acc += dt; worst = Math.max(worst, dt);
-      if (acc > 500) {
-        hud.textContent = `fps   ${(1000 / (acc / frames)).toFixed(1)}\nworst ${worst.toFixed(1)}ms\n` +
-          `prog  ${timeline.progress().toFixed(3)}\ndpr   ${renderer.dpr}  ${gl.drawingBufferWidth}x${gl.drawingBufferHeight}`;
+      frames++; acc += rawDt; worst = Math.max(worst, rawDt);
+      if (acc > 500 || reduced) {
+        const fps = reduced ? 'still' : (1000 / (acc / frames)).toFixed(1);
+        hud.textContent = `fps   ${fps}\nworst ${worst.toFixed(1)}ms\n` +
+          `prog  ${timeline.progress().toFixed(3)}\ndpr   ${renderer.dpr.toFixed(2)}  ` +
+          `${gl.drawingBufferWidth}x${gl.drawingBufferHeight}`;
         frames = 0; acc = 0; worst = 0;
       }
     }
-    requestAnimationFrame(frame);
+    metrics.renders++;
+    metrics.frameMs = rawDt;
+    metrics.cpuMs = performance.now() - cpuStart;
+    document.body.classList.add('ready');
+    if (!reduced) rafId = requestAnimationFrame(frame);
   }
 
-  resize();
-  requestAnimationFrame(frame);
+  function renderStill() {
+    // Also redraw reduced motion after a real resize, without waking an idle loop.
+    cancelAnimationFrame(rafId);
+    frame(performance.now());
+  }
+
+  function suspend() {
+    cancelAnimationFrame(rafId);
+    rafId = 0;
+    last = 0;
+    velocity = 0;
+    lenis?.reset();
+    trigger?.getTween()?.pause();
+    resetPointer();
+  }
+
+  function resume() {
+    if (document.hidden || destroyed || gl.isContextLost()) return;
+    last = 0;
+    resize();
+    lenis?.reset();
+    previousScroll = window.scrollY;
+    ScrollTrigger.update();
+    trigger?.getTween()?.play();
+    renderStill();
+    if (!cueGone && !reduced && sceneTime > 1400) cue.classList.add('on');
+  }
+
+  function visibilityChange() {
+    if (document.hidden) suspend();
+    else resume();
+  }
+
+  let motionPosition = progress;
+  function motionChange() {
+    reduced = motionQuery.matches;
+    suspend();
+    configureScroll(motionPosition);
+    resume();
+  }
+
+  function inputChange() {
+    const position = trigger?.progress ?? motionPosition;
+    suspend();
+    resize();
+    configureScroll(position);
+    resume();
+  }
+
+  motionQuery.addEventListener('change', motionChange);
+  touchQuery.addEventListener('change', inputChange);
+  document.addEventListener('visibilitychange', visibilityChange);
+  document.addEventListener('freeze', suspend);
+  document.addEventListener('resume', resume);
+  window.addEventListener('pagehide', suspend);
+  window.addEventListener('pageshow', resume);
+  // setSize() in the Renderer constructor also writes pixel styles.
+  canvas.style.width = '';
+  canvas.style.height = '';
+  resize(false);
+  configureScroll(progress);
+  renderStill();
 
   // verification handle — the sequence cannot be checked from the DOM
   window.__n = { timeline, state, cam, renderer, view, fieldProgram, compositeProgram,
                  uLineMeta, uNodes, uLatticeProg, hdr: !!HDR,
+                 layout, metrics, get lenis() { return lenis; },
+                 get trigger() { return trigger; },
+                 get triggerCount() { return ScrollTrigger.getAll().length; },
                  counts: { lattice: lattice.count, mark: mark.count } };
+
+  return {
+    get progress() { return reduced ? motionPosition : trigger?.progress ?? 0; },
+    destroy() {
+      destroyed = true;
+      suspend();
+      clearTimeout(resizeTimer);
+      clearTimeout(cueTimer);
+      trigger?.kill();
+      lenis?.destroy();
+      timeline.kill();
+      motionQuery.removeEventListener('change', motionChange);
+      touchQuery.removeEventListener('change', inputChange);
+      window.removeEventListener('resize', scheduleResize);
+      window.removeEventListener('orientationchange', scheduleResize);
+      window.removeEventListener('pointermove', movePointer);
+      window.removeEventListener('keydown', keyboardScroll);
+      document.documentElement.removeEventListener('pointerleave', resetPointer);
+      document.removeEventListener('visibilitychange', visibilityChange);
+      document.removeEventListener('freeze', suspend);
+      document.removeEventListener('resume', resume);
+      window.removeEventListener('pagehide', suspend);
+      window.removeEventListener('pageshow', resume);
+      [maskRT, sceneRT, ...down, ...up].forEach((rt) => {
+        gl.deleteTexture(rt.texture.texture);
+        gl.deleteFramebuffer(rt.buffer);
+      });
+      const meshes = [markMesh, dustMesh, latticeMesh, fieldMesh,
+        prefilterMesh, downMesh, upMesh, compositeMesh];
+      new Set(meshes.map(mesh => mesh.geometry)).forEach(geometry => geometry.remove());
+      meshes.forEach(mesh => mesh.program.remove());
+      delete window.__n;
+    },
+  };
 
 }
 
@@ -445,7 +665,8 @@ function pickHdrFormat(gl, isWebgl2) {
     }
   } else {
     const hf = gl.getExtension('OES_texture_half_float');
-    if (hf && gl.getExtension('EXT_color_buffer_half_float') && gl.getExtension('OES_texture_half_float_linear')) {
+    if (hf && gl.getExtension('EXT_color_buffer_half_float') &&
+        gl.getExtension('OES_texture_half_float_linear')) {
       fmt = { type: hf.HALF_FLOAT_OES, internalFormat: gl.RGBA, format: gl.RGBA };
     }
   }

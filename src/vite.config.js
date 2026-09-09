@@ -24,7 +24,8 @@ function buildSinglePage() {
       const js = chunks[0].code.replace(/<\/script>/gi, '<\\/script>');
       html.source = html.source
         .replace(/\s*<script[^>]*src="[^"]*"[^>]*>\s*<\/script>/i, '')
-        .replace('</body>', `<script type="module">\n${js}\n</script>\n</body>`);
+        // A replacement callback keeps $&, $` and $' in bundled JS literal.
+        .replace('</body>', () => `<script type="module">\n${js}\n</script>\n</body>`);
       delete bundle[chunks[0].fileName];
 
       delete bundle[key];

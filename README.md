@@ -8,7 +8,7 @@ domain resolves, by design.
 ## Current state
 
 - `index.html` — **the entire site, and a generated file.** One self-contained
-  document, 256 KB / 91 KB gzipped: markup, styles, shaders, artwork geometry
+  document, 266 kB / 95 kB gzipped: markup, styles, shaders, artwork geometry
   and the renderer are all inlined, so the page makes no second request. Do not
   hand-edit it; `npm run build` overwrites it.
 - `src/` — the source it is built from (see [Build state](#build-state)).
@@ -33,8 +33,10 @@ register of [Lusion](https://lusion.co/).
 Everything about this project stays in this repo. This file is the brief; the
 source is in `src/`.
 
-**Status: shipped.** It is the site. Every open question in §7 is decided and
-every gate in §5 passes with measured numbers. The brief below is kept
+**Status: shipped; polish pass approved (2026-09-08).** The approved concept,
+six beats, shaders and desktop composition are unchanged. The refinement is
+built, verified and approved for publication. Every open question in §7 remains
+decided. The brief below is kept
 as-written — it is still the spec the build is held to, and still handoff-ready
 for a fresh session (copy BEGIN to END). What actually shipped is in
 [Build state](#build-state) at the bottom.
@@ -232,49 +234,89 @@ Node 22 via `.nvmrc`.
 These are the gates. Iterate until every one passes — this list is what
 "super clean" means, so that iteration converges instead of wandering.
 
-Measurements below are from the production build, driven by Playwright over a
-full scroll of the sequence. Frame times are rAF deltas; ~1 770 frames per
-configuration, three runs.
+Measurements below are from the **local production build, 2026-09-08**, driven
+with Playwright 1.58.2 / Chromium 145 on an **Apple M4 Max, macOS 15.6.1**, using
+hardware ANGLE/Metal. Normal browser frame pacing is enabled (120 Hz on this
+host): **no `--disable-frame-rate-limit` flag**. Seven configurations, three
+10-second forward-and-reverse scroll runs each, **25,208 sampled frames**.
+The table reports the worst percentile across the three runs, not a selected
+best run. Screenshot readback is kept outside timing windows. Screenshots and lifecycle checks also ran in **WebKit 26.0**.
+
+The old 1–2 ms "60fps" figures were collected with Chromium's frame-rate limit
+disabled; they were not real display cadence and have been superseded. rAF
+intervals below measure cadence; render-CPU time measures JS/WebGL submission,
+**not completed GPU time**. CPU throttling does not emulate a phone GPU or prove
+performance on other integrated graphics. Physical iOS/Android toolbar behavior
+and device GPU/thermal performance remain unmeasured; mobile results here are
+explicitly emulation, plus the injected toolbar-lifecycle test below.
 
 **Performance**
 
-- [x] Locked 60fps at 1440×900 on Apple Silicon, measured over a full scroll —
-      **≤2.1 ms median, 2.4 ms p95** at a 2880×1800 backing buffer. The budget
-      is 16.7 ms; roughly seven eighths of it is unspent.
-- [x] ≥30fps on integrated graphics (throttle CPU 4×) — **≤1.2 ms median**;
-      also ≤2.0 ms at 2560×1440 and ≤2.0 ms at iPhone 390×844@3x
-- [x] No frame over 50ms during the whole sequence — **0 of ~21 000 frames**
-      across all four configurations and three runs; worst single frame 11.6 ms
-- [x] JS payload **< 120 KB gzipped total** — **92 KB** (89.9 scene + 1.3
-      entry + 1.3 HTML). No CDN, no fonts, no images, one request each.
-- [x] Scene interactive < 3s on simulated Fast 3G — **1.68 s**
+| Profile | Backing buffer | rAF p50 | p95 | p99 | Worst | Render CPU p95 |
+|---|---|---:|---:|---:|---:|---:|
+| Desktop 1440×900 @2× | 2880×1800 | 8.3 ms | 9.8 ms | 10.2 ms | 10.4 ms | 0.2 ms |
+| Desktop 2560×1440 @1× | 2560×1440 | 8.3 ms | 9.9 ms | 10.3 ms | 10.4 ms | 0.2 ms |
+| Desktop 1440×900, CPU 4× | 2880×1800 | 8.3 ms | 10.0 ms | 10.3 ms | 10.4 ms | 0.6 ms |
+| iPhone 390×844 @3× | 780×1688 | 8.3 ms | 9.8 ms | 10.3 ms | 10.4 ms | 0.2 ms |
+| iPhone, CPU 4× | 780×1688 | 8.3 ms | 10.0 ms | 10.3 ms | 10.4 ms | 0.4 ms |
+| Android 412×839 @3× | 824×1678 | 8.3 ms | 9.9 ms | 10.2 ms | 10.4 ms | 0.2 ms |
+| Android, CPU 4× | 824×1678 | 8.3 ms | 10.0 ms | 10.3 ms | 10.4 ms | 0.5 ms |
+
+- [x] ≥60fps at 1440×900 on this Apple Silicon host: **8.3 ms median**,
+      maintaining its 120 Hz cadence with the approved 2880×1800 buffer.
+- [x] ≥30fps under CPU 4× emulation: **p95 ≤10.0 ms** on desktop and both
+      mobile profiles. This is a CPU stress gate, not physical phone certification.
+- [x] No frame over 50 ms in the timed full-sequence runs: **0 / 25,208**;
+      **10.4 ms** worst frame.
+- [x] Separate CDP-native touch swipes at CPU 4× traverse end-to-start on both
+      phone profiles: **2,475 frames**, **8.3 ms median / 10.1 ms p95 / 10.3 ms
+      p99 / 10.4 ms worst**, zero >50 ms frames, ending at exactly zero with
+      one trigger and no layout rebuilds.
+- [x] JS payload <120 kB gzipped: the **entire HTML, JS, shaders and geometry
+      total 94.8 kB gzipped** (265.7 kB raw). One document request, no assets.
+- [x] Scene interactive <3 s: **1.59 s**, at exactly zero progress, with a cold
+      cache, 1.6 Mbps down / 750 kbps up / 150 ms latency and CPU 4×. The local
+      HTTP server sent the full **uncompressed** document; zero other requests.
 
 **Correctness**
 
-- [x] Page rests at beat 1 on load — blank/void, animation at exactly zero
-      progress, no flash of a later state (the current site had this bug: the
-      ScrollTrigger start offset put progress above zero at scroll 0)
-- [x] Zero console errors, zero failed requests
-- [x] Resize mid-scroll rebuilds cleanly, leaves exactly one ScrollTrigger, no
-      leaked render targets or listeners — seven viewport changes mid-sequence,
-      clean; render targets free both texture and framebuffer
-- [x] Works at 390×844 through 2560×1440; the composition reflows, it does not
-      just scale — the mark holds 34% of the short axis, 46% under 700px, and
-      the infinite construction lines fill whatever is left
-- [x] Scrubbing backwards is as clean as forwards — end-to-start returns every
-      state variable to exactly its initial value
+- [x] Fresh load and reload start at exactly zero, on the void. The canvas is
+      revealed only after the first complete render; no later-state flash.
+- [x] Zero console errors and zero failed requests in the production checks.
+- [x] Seven viewport changes mid-sequence preserve progress within 0.001 and
+      leave exactly one ScrollTrigger. GPU instrumentation stays at **11 live
+      textures + 11 live framebuffers**, with no new objects on resize.
+- [x] Thirty simulated browser-toolbar height changes on each phone profile:
+      **zero target reallocations, zero refreshes, unchanged progress**. Width
+      and `lvh` stayed fixed while `innerHeight` changed, matching the toolbar
+      resize contract. This is an injected lifecycle test, not real browser UI.
+- [x] Portrait/landscape and 390×844 through 2560×1440 checked visually. Approved
+      shares remain 34% of the short axis, 46% when width is under 700 px.
+- [x] End-to-start scrubbing returns every timeline state, camera state, line,
+      node and lattice value exactly to its initial value.
+- [x] Native touch gestures advance and reverse the sequence on iPhone/Android
+      profiles, without Lenis or touch parallax. Keyboard and wheel checks pass.
+- [x] Real hidden-tab test: render count and scene time stop while hidden;
+      returning preserves progress and does not refresh or reallocate. The
+      Playwright runner's forced-focus emulation was disabled for this test.
+- [x] GPU context loss shows the still; restoration returns to retained progress
+      with one trigger and 11 live target textures/framebuffers.
 
 **Accessibility & degradation**
 
-- [x] `prefers-reduced-motion: reduce` → static composed N, no scroll hijack —
-      the track collapses to 100vh, Lenis is never constructed, timeline pinned
-      at 1
-- [x] No WebGL → falls back to the SVG mark, silently. The capability test is
-      the entry chunk (1.3 KB); the renderer is a dynamic import behind it, so
-      a client that cannot render never downloads one.
-- [x] Real `<h1>` and meta description in the DOM for crawlers and screen
-      readers, visually hidden
-- [x] Lenis does not trap keyboard scrolling; Home/End/PageUp/PageDown work
+- [x] Initial and live `prefers-reduced-motion: reduce`: final composition at
+      progress 1, zero scroll range, zero ScrollTriggers, no Lenis and no idle
+      render loop. Idle screenshots are byte-identical; resize redraws once.
+      Removing the preference restores the prior normal-motion position.
+- [x] WebGL1 tested. No WebGL or no renderable half-float support silently shows
+      the SVG mark and collapses the track. The one-file build contains all code;
+      there is no separate renderer download, including on this fallback path.
+- [x] Real `<h1>` and meta description remain in the DOM; decorative canvas and
+      diagnostic HUD are hidden from assistive technology.
+- [x] Home/End/PageUp/PageDown work, including handing off from wheel inertia.
+- [x] Safe-area override: a 34 px home-indicator inset places the cue 68 px above
+      the viewport bottom and the HUD 34 px above it. Native **1.5× pinch zoom**
+      is allowed and causes no scene resize or timeline refresh.
 
 **Craft**
 
@@ -283,12 +325,12 @@ configuration, three runs.
       Beats overlap by design (nodes fire while the last lines are still
       arriving; the lattice tail runs into the coalescence), and the camera
       moves continuously underneath all of it.
-- [x] Total scroll length justified by content — 620vh, down from the current
-      site's 800vh
+- [x] Total scroll length justified by content — the equivalent of 620vh,
+      now a stable 520lvh scrub distance plus one live viewport of track
 - [x] The red is used once, with intent — the four nodes and the lattice they
       draw, nothing else
-- [x] Screenshot at 6 evenly spaced scroll depths — each frame should stand
-      alone as a composition
+- [x] Screenshots at 0/20/40/60/80/100% in desktop, iPhone, Android and
+      WebKit iPhone profiles, visually inspected alongside the approved baseline
 
 ### 6. How to iterate
 
@@ -341,7 +383,50 @@ fresh session does not reopen them.
 
 ## Build state
 
-Shipped. It is the site, and it passes every gate in §5.
+**Polish pass — 2026-09-08, approved for publication.** The generated root
+`index.html` is current. Local development remains at <http://localhost:5181/>.
+`CNAME`, `.nojekyll`, Pages settings and the local-only `_archive/` are untouched.
+The six-beat timeline and all shaders are unchanged.
+
+**Refinement, not redesign**
+
+- Native scrollbars are hidden in Chromium, WebKit and Firefox CSS without
+  disabling scrolling, keyboard input or pinch zoom. Root overscroll and scroll
+  anchoring are disabled; the cue and diagnostic HUD respect safe-area insets.
+- The artwork uses a stable `100lvh` stage (`100vh` fallback). Scroll distance
+  stays at 5.2 large viewports; only the track's viewport-sized tail follows
+  `innerHeight`. Browser toolbar changes do not clear the canvas, resize GPU
+  storage, refresh ScrollTrigger or change the mapping from scroll to progress.
+  `dvh` is deliberately not the render-buffer size: that would reintroduce
+  address-bar-driven allocation. Real viewport/orientation changes settle for
+  160 ms, resize existing targets in place and retain normalized progress.
+- Touch stays entirely native: no Lenis instance on a coarse-primary pointer,
+  no simulated touch inertia, no swipe-driven parallax. Desktop wheel input
+  keeps the existing Lenis tuning. ScrollTrigger now owns the timeline through
+  `animation` so its intended 0.35 s scrub actually works. Keyboard commands
+  cancel pending wheel inertia without preventing the browser's key action.
+- DPR remains capped at 2, including 3× phones; large touch viewports also have
+  a two-million-pixel budget. DPR-dependent uniforms update with the buffer.
+  The desktop resolution and artwork proportions are unchanged.
+- The canvas stays hidden until its first complete composition. A fresh
+  navigation/reload starts at zero; the scroll cue cannot arrive after it has
+  been dismissed. There is no extra font, favicon or asset request.
+- Hidden/frozen pages stop rendering; the scene clock pauses rather than
+  jumping on resume. Mouse damping is refresh-rate independent. Reduced motion
+  renders a truly static final composition, with no Lenis, ScrollTrigger or
+  continuous render loop. Live preference changes and resizing work as well.
+- Capability detection uses the actual canvas, not a second GPU context.
+  Missing WebGL or renderable half-float support lands on the SVG still. Context
+  loss disposes scene resources/listeners, shows that still, and reconstructs
+  the scene at the retained progress if the context is restored. No 8-bit
+  intermediate fallback is introduced.
+- The single-file build uses a replacement callback when inlining JavaScript;
+  literal dollar sequences in minified code cannot corrupt the HTML anymore.
+
+**Verification artifacts** live outside this public repository, in
+`/tmp/ncarnate-polish/qa/`; the Playwright runners are in its parent directory.
+These are local working evidence, not published site assets. Measured gates and
+hardware/emulation limits are recorded in §5.
 
 ```
 index.html              generated — the entire site, one self-contained file
@@ -350,8 +435,8 @@ CNAME                   the custom domain
 src/
   page.html             the page shell: void ground, canvas, cue, no-WebGL still
                         (not index.html, so /src/ resolves to nothing on Pages)
-  main.js               WebGL capability test; the fallback mark; nothing else
-  scene.js              boot(): passes, six-beat timeline, scroll rig, frame loop
+  main.js               canvas capability test, fallback mark, context recovery
+  scene.js              boot(): passes, six-beat timeline, stable layout, scroll/lifecycle
   geometry.json         resolved artwork — transforms baked out of the source SVG
   lib/artwork.js        geometry.json -> lines, nodes, lattice buffers, mark polygons
   shaders/              fullscreen.vert lattice.vert dust.vert
@@ -367,13 +452,13 @@ src/
 cd src
 nvm use            # 22 — Vite 7 will not start on 20.11.1
 npm install
-npm run dev        # http://localhost:5180, hot reload
+npm run dev        # http://localhost:5181, hot reload
 npm run build      # rewrites the root index.html
 ```
 
 Preview what Pages actually serves with `python3 -m http.server 8000` from the
-repository root. `?hud` on either URL prints fps, worst frame, timeline progress
-and buffer size.
+repository root. `?hud` on either URL prints actual frame cadence, worst frame,
+timeline progress and buffer size. Test without `?hud` for performance samples.
 
 **What the frame is made of**, per render:
 
