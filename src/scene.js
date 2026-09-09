@@ -351,15 +351,6 @@ export function boot({ progress = 0 } = {}) {
   // scroll
   // ---------------------------------------------------------------------------
   let velocity = 0;
-  const cue = document.querySelector('#cue');
-  let cueGone = progress > 0, cueTimer = 0;
-
-  function retireCue() {
-    if (cueGone || timeline.progress() < 0.006) return;
-    cueGone = true;
-    clearTimeout(cueTimer);
-    cue.classList.remove('on');
-  }
 
   function seek(position) {
     const y = position * layout.distance;
@@ -380,8 +371,6 @@ export function boot({ progress = 0 } = {}) {
     if (reduced) {
       window.scrollTo(0, 0);
       timeline.progress(1);
-      cue.classList.remove('on');
-      clearTimeout(cueTimer);
       return;
     }
     // Touch belongs to the browser: native momentum, pinch zoom and swipe-back.
@@ -402,12 +391,6 @@ export function boot({ progress = 0 } = {}) {
     });
     layout.refreshes++;
     seek(position);
-    if (!cueGone) {
-      clearTimeout(cueTimer);
-      cueTimer = setTimeout(() => {
-        if (!cueGone && !reduced && !document.hidden) cue.classList.add('on');
-      }, 1400);
-    }
   }
 
   // ---------------------------------------------------------------------------
@@ -462,7 +445,6 @@ export function boot({ progress = 0 } = {}) {
     // CSS collapses the track before a motion-query change event is delivered.
     // Remember the last normal frame, not the resulting browser-clamped scroll.
     if (!reduced && !motionQuery.matches) motionPosition = trigger?.progress ?? motionPosition;
-    retireCue();
 
     if (!reduced && !touchQuery.matches) {
       pointer.idle += dt;
@@ -572,7 +554,6 @@ export function boot({ progress = 0 } = {}) {
     ScrollTrigger.update();
     trigger?.getTween()?.play();
     renderStill();
-    if (!cueGone && !reduced && sceneTime > 1400) cue.classList.add('on');
   }
 
   function visibilityChange() {
@@ -624,7 +605,6 @@ export function boot({ progress = 0 } = {}) {
       destroyed = true;
       suspend();
       clearTimeout(resizeTimer);
-      clearTimeout(cueTimer);
       trigger?.kill();
       lenis?.destroy();
       timeline.kill();

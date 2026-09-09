@@ -8,7 +8,7 @@ domain resolves, by design.
 ## Current state
 
 - `index.html` — **the entire site, and a generated file.** One self-contained
-  document, 267 kB / 95 kB gzipped: markup, styles, shaders, artwork geometry
+  document, 265 kB / 95 kB gzipped: markup, styles, shaders, artwork geometry
   and the renderer are all inlined, so the page makes no second request. Do not
   hand-edit it; `npm run build` overwrites it.
 - `src/` — the source it is built from (see [Build state](#build-state)).
@@ -39,6 +39,9 @@ rays on top of the interaction polish in `ab17ceb`; the source geometry, six
 beats and final mark remain unchanged. Both optical passes are approved.
 Reference rationale and measured verification are in §5 and
 [Build state](#build-state).
+
+**Scroll hint removed:** the bottom-centre scroll hint has been removed entirely,
+including its animation and lifecycle code. Scrolling and the artwork are unchanged.
 
 ---
 
@@ -337,7 +340,7 @@ explicitly emulation, plus the injected toolbar-lifecycle test below.
       p99 / 9.4 ms worst**, zero >50 ms frames, ending at exactly zero with
       one trigger and no layout rebuilds.
 - [x] JS payload <120 kB gzipped: the **entire HTML, JS, shaders and geometry
-      total 95.2 kB gzipped** (267.0 kB raw, Vite report). One document request, no assets.
+      total 94.7 kB gzipped** (265.4 kB raw, Vite report). One document request, no assets.
 - [x] Scene interactive <3 s: **1.59 s**, at exactly zero progress, with a cold
       cache, 1.6 Mbps down / 750 kbps up / 150 ms latency and CPU 4×. The local
       HTTP server sent the full **uncompressed** document; zero other requests.
@@ -378,8 +381,8 @@ explicitly emulation, plus the injected toolbar-lifecycle test below.
 - [x] Real `<h1>` and meta description remain in the DOM; decorative canvas and
       diagnostic HUD are hidden from assistive technology.
 - [x] Home/End/PageUp/PageDown work, including handing off from wheel inertia.
-- [x] Safe-area override: a 34 px home-indicator inset places the cue 68 px above
-      the viewport bottom and the HUD 34 px above it. Native **1.5× pinch zoom**
+- [x] Safe-area override: a 34 px home-indicator inset places the diagnostic HUD
+      34 px above the viewport bottom. Native **1.5× pinch zoom**
       is allowed and causes no scene resize or timeline refresh.
 
 **Craft**
@@ -447,6 +450,14 @@ fresh session does not reopen them.
 
 ## Build state
 
+**Scroll hint removed — approved release, 2026-09-08.** Removed the label, animated
+line, styles, timer and lifecycle hooks. The generated `index.html` is rebuilt.
+No shader, timeline or scrolling changes; §5 frame-time measurements remain from
+the approved optical build. The removal is included in this revision.
+Chromium desktop/iPhone and WebKit iPhone checks pass: no hint after idle,
+zero-progress load, forward/reverse scroll, resize, reduced motion and clean
+console. Screenshots were inspected; evidence is in `/tmp/ncarnate-no-cue/`.
+
 **Red-light + star-ray refinement — approved release, 2026-09-08.** The generated
 root `index.html` is current and verified; the development preview remains at
 <http://localhost:5181/>. Both optical passes are included in this revision.
@@ -467,7 +478,7 @@ mobile refinements remain in place:
 
 - Native scrollbars are hidden in Chromium, WebKit and Firefox CSS without
   disabling scrolling, keyboard input or pinch zoom. Root overscroll and scroll
-  anchoring are disabled; the cue and diagnostic HUD respect safe-area insets.
+  anchoring are disabled; the diagnostic HUD respects safe-area insets.
 - The artwork uses a stable `100lvh` stage (`100vh` fallback). Scroll distance
   stays at 5.2 large viewports; only the track's viewport-sized tail follows
   `innerHeight`. Browser toolbar changes do not clear the canvas, resize GPU
@@ -484,8 +495,7 @@ mobile refinements remain in place:
   a two-million-pixel budget. DPR-dependent uniforms update with the buffer.
   The desktop resolution and artwork proportions are unchanged.
 - The canvas stays hidden until its first complete composition. A fresh
-  navigation/reload starts at zero; the scroll cue cannot arrive after it has
-  been dismissed. There is no extra font, favicon or asset request.
+  navigation/reload starts at zero. There is no extra font, favicon or asset request.
 - Hidden/frozen pages stop rendering; the scene clock pauses rather than
   jumping on resume. Mouse damping is refresh-rate independent. Reduced motion
   renders a truly static final composition, with no Lenis, ScrollTrigger or
@@ -509,7 +519,7 @@ index.html              generated — the entire site, one self-contained file
 CNAME                   the custom domain
 .nojekyll               Pages serves the files as they are
 src/
-  page.html             the page shell: void ground, canvas, cue, no-WebGL still
+  page.html             the page shell: void ground, canvas, no-WebGL still
                         (not index.html, so /src/ resolves to nothing on Pages)
   main.js               canvas capability test, fallback mark, context recovery
   scene.js              boot(): passes, six-beat timeline, stable layout, scroll/lifecycle
