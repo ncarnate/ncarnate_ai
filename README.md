@@ -8,7 +8,7 @@ domain resolves, by design.
 ## Current state
 
 - `index.html` — **the entire site, and a generated file.** One self-contained
-  document, 266 kB / 95 kB gzipped: markup, styles, shaders, artwork geometry
+  document, 267 kB / 95 kB gzipped: markup, styles, shaders, artwork geometry
   and the renderer are all inlined, so the page makes no second request. Do not
   hand-edit it; `npm run build` overwrites it.
 - `src/` — the source it is built from (see [Build state](#build-state)).
@@ -33,13 +33,12 @@ register of [Lusion](https://lusion.co/).
 Everything about this project stays in this repo. This file is the brief; the
 source is in `src/`.
 
-**Status: shipped; polish pass approved (2026-09-08).** The approved concept,
-six beats, shaders and desktop composition are unchanged. The refinement is
-built, verified and approved for publication. Every open question in §7 remains
-decided. The brief below is kept
-as-written — it is still the spec the build is held to, and still handoff-ready
-for a fresh session (copy BEGIN to END). What actually shipped is in
-[Build state](#build-state) at the bottom.
+**Status: interaction, red-light and star-ray polish complete (2026-09-08).**
+This revision refines the red lattice, node lighting and white construction
+rays on top of the interaction polish in `ab17ceb`; the source geometry, six
+beats and final mark remain unchanged. Both optical passes are approved.
+Reference rationale and measured verification are in §5 and
+[Build state](#build-state).
 
 ---
 
@@ -234,13 +233,78 @@ Node 22 via `.nvmrc`.
 These are the gates. Iterate until every one passes — this list is what
 "super clean" means, so that iteration converges instead of wandering.
 
+**Red-light finish: reference and calibration**
+
+The original stroke weight was tuned by eye. This pass uses explicit visual
+precedents, then calibrates the actual raster output; no reference is being
+claimed as the source of a universal CSS line-width value.
+
+| Primary reference | What was inspected | Decision for this piece |
+|---|---|---|
+| [Ryoji Ikeda — data-verse / X-verse](https://www.ryojiikeda.com/project/x_verse/) | The artist's data-verse 3 installation photographs: fine white networks and precise red coordinate accents | Red should describe structure, with no broad wash obscuring the intersections. Not a reference for this page's pacing or flashing. |
+| [Matt DesLauriers — Subscapes, technical account](https://mattdesl.substack.com/p/subscapes-part-3) | Artist-published renderings and the discussion of line thickness, density and contrast | Judge weight and contrast together, and keep fine strokes continuous. The quieter candidate must not erase the lattice at 1×. |
+| [Lusion](https://lusion.co/) | Live homepage, entry and scroll transition | The broader interactive-finish benchmark. Its current 3D materials are not a literal stroke-width reference or a motif to copy. |
+
+The visual conclusions in the last column are this project's design judgments,
+not specifications published by those artists. Reference images remain in the
+local QA directory, not in this public repository.
+
+**Selected treatment**, compared in-context at 38/46/53/60/66/72/80% on desktop
+1×/2× and a 3× phone profile (rendered at the existing 2× cap):
+
+- **0.55 CSS px** lattice width, replacing 0.7 CSS px plus a one-device-pixel
+  minimum. The 0.50 px / lower-opacity candidate was also rendered and inspected;
+  0.55 keeps the geometric structure more legible at 1× and on mobile.
+- Thin-strip pixel coverage and shared miter joins replace overlapping segment
+  caps. Sampling density no longer makes a stroke heavier or creates bright
+  joints; this is a rasterization correction, not a change to the artwork paths.
+- Lattice base alpha **0.62 → 0.50**. Drawing tips remain red, with a small
+  temporary lift instead of white-hot endpoints; they cool fully at completion.
+- Node halo gain **0.50 → 0.18** (64% less), with its exponential falloff length
+  **18.2 → 11.1 artwork units**. Node radius is 72% of its former rendered value;
+  lower core energy keeps the four arrivals precise without losing their beat.
+- This first optical pass left the white construction rays unchanged; the
+  follow-on ray treatment is recorded below. No global bloom reduction, palette
+  or timeline change. All targets remain half-float, with final dithering intact.
+
+**Star-ray finish: Lusion-led calibration**
+
+[Lusion](https://lusion.co/) is the governing reference for this follow-on pass.
+The live homepage and its scroll transition were inspected again: contained
+specular highlights against dark materials preserve contrast without spreading
+light across the whole image. The translation to this flat piece is a finer
+construction field, controlled intersections and a brighter relative payoff.
+This is our interpretation of the reference, not a claim about Lusion's shader
+parameters or a reason to introduce its 3D motifs.
+
+Two candidates were rendered against the previous red-refined build at
+8/14/20/30/40/60/72/80/100%, on desktop 1×/2× and an iPhone profile. The quieter
+candidate was selected: its rays remain continuous and legible, with less haze
+and a clearer separation between the construction and the N's arrival.
+
+- Core support **1.50 → 1.15 artwork units**, retaining the **0.8-device-pixel
+  feather** for subpixel stability. Core gain **1.0 → 0.80**. These are light
+  profile parameters, not a fixed CSS stroke-width claim.
+- Halo gain **0.22 → 0.12** (45% lower); rest-state exponential falloff length
+  **11.8 → 8.0 artwork units**. Scroll-velocity response remains in place.
+- A local, smooth highlight shoulder replaces the hard accumulated-light cap
+  during construction. Six overlapping rays retain a luminous centre without
+  flattening into a broad white hotspot; global bloom is unchanged.
+- Travelling-head contribution **0.30 → 0.20**, with a narrower halo contribution
+  and smooth onset/completion instead of binary activation. The twelve arrivals
+  keep their original timeline and geometry.
+- The original ray profile returns progressively inside the emerging N. The
+  mark's own body/rim lighting, final ink, seed, dust and the previous red-light
+  settings are unchanged. Nothing in scroll, resize or resource handling changed.
+
 Measurements below are from the **local production build, 2026-09-08**, driven
 with Playwright 1.58.2 / Chromium 145 on an **Apple M4 Max, macOS 15.6.1**, using
 hardware ANGLE/Metal. Normal browser frame pacing is enabled (120 Hz on this
 host): **no `--disable-frame-rate-limit` flag**. Seven configurations, three
-10-second forward-and-reverse scroll runs each, **25,208 sampled frames**.
+10-second forward-and-reverse scroll runs each, **25,211 sampled frames**.
 The table reports the worst percentile across the three runs, not a selected
-best run. Screenshot readback is kept outside timing windows. Screenshots and lifecycle checks also ran in **WebKit 26.0**.
+best run. Screenshot readback is kept outside timing windows. Screenshots and
+lifecycle checks also ran in **WebKit 26.0**.
 
 The old 1–2 ms "60fps" figures were collected with Chromium's frame-rate limit
 disabled; they were not real display cadence and have been superseded. rAF
@@ -254,26 +318,26 @@ explicitly emulation, plus the injected toolbar-lifecycle test below.
 
 | Profile | Backing buffer | rAF p50 | p95 | p99 | Worst | Render CPU p95 |
 |---|---|---:|---:|---:|---:|---:|
-| Desktop 1440×900 @2× | 2880×1800 | 8.3 ms | 9.8 ms | 10.2 ms | 10.4 ms | 0.2 ms |
-| Desktop 2560×1440 @1× | 2560×1440 | 8.3 ms | 9.9 ms | 10.3 ms | 10.4 ms | 0.2 ms |
-| Desktop 1440×900, CPU 4× | 2880×1800 | 8.3 ms | 10.0 ms | 10.3 ms | 10.4 ms | 0.6 ms |
-| iPhone 390×844 @3× | 780×1688 | 8.3 ms | 9.8 ms | 10.3 ms | 10.4 ms | 0.2 ms |
-| iPhone, CPU 4× | 780×1688 | 8.3 ms | 10.0 ms | 10.3 ms | 10.4 ms | 0.4 ms |
-| Android 412×839 @3× | 824×1678 | 8.3 ms | 9.9 ms | 10.2 ms | 10.4 ms | 0.2 ms |
-| Android, CPU 4× | 824×1678 | 8.3 ms | 10.0 ms | 10.3 ms | 10.4 ms | 0.5 ms |
+| Desktop 1440×900 @2× | 2880×1800 | 8.3 ms | 9.1 ms | 9.3 ms | 9.4 ms | 0.3 ms |
+| Desktop 2560×1440 @1× | 2560×1440 | 8.3 ms | 9.1 ms | 9.3 ms | 9.4 ms | 0.3 ms |
+| Desktop 1440×900, CPU 4× | 2880×1800 | 8.3 ms | 9.2 ms | 9.3 ms | 9.4 ms | 0.5 ms |
+| iPhone 390×844 @3× | 780×1688 | 8.3 ms | 9.1 ms | 9.3 ms | 9.4 ms | 0.3 ms |
+| iPhone, CPU 4× | 780×1688 | 8.3 ms | 9.2 ms | 9.3 ms | 9.4 ms | 0.4 ms |
+| Android 412×839 @3× | 824×1678 | 8.3 ms | 9.1 ms | 9.3 ms | 9.4 ms | 0.3 ms |
+| Android, CPU 4× | 824×1678 | 8.3 ms | 9.2 ms | 9.3 ms | 9.4 ms | 0.4 ms |
 
 - [x] ≥60fps at 1440×900 on this Apple Silicon host: **8.3 ms median**,
       maintaining its 120 Hz cadence with the approved 2880×1800 buffer.
-- [x] ≥30fps under CPU 4× emulation: **p95 ≤10.0 ms** on desktop and both
+- [x] ≥30fps under CPU 4× emulation: **p95 ≤9.2 ms** on desktop and both
       mobile profiles. This is a CPU stress gate, not physical phone certification.
-- [x] No frame over 50 ms in the timed full-sequence runs: **0 / 25,208**;
-      **10.4 ms** worst frame.
+- [x] No frame over 50 ms in the timed full-sequence runs: **0 / 25,211**;
+      **9.4 ms** worst frame.
 - [x] Separate CDP-native touch swipes at CPU 4× traverse end-to-start on both
-      phone profiles: **2,475 frames**, **8.3 ms median / 10.1 ms p95 / 10.3 ms
-      p99 / 10.4 ms worst**, zero >50 ms frames, ending at exactly zero with
+      phone profiles: **2,480 frames**, **8.3 ms median / 9.2 ms p95 / 9.3 ms
+      p99 / 9.4 ms worst**, zero >50 ms frames, ending at exactly zero with
       one trigger and no layout rebuilds.
 - [x] JS payload <120 kB gzipped: the **entire HTML, JS, shaders and geometry
-      total 94.8 kB gzipped** (265.7 kB raw). One document request, no assets.
+      total 95.2 kB gzipped** (267.0 kB raw, Vite report). One document request, no assets.
 - [x] Scene interactive <3 s: **1.59 s**, at exactly zero progress, with a cold
       cache, 1.6 Mbps down / 750 kbps up / 150 ms latency and CPU 4×. The local
       HTTP server sent the full **uncompressed** document; zero other requests.
@@ -383,10 +447,21 @@ fresh session does not reopen them.
 
 ## Build state
 
-**Polish pass — 2026-09-08, approved for publication.** The generated root
-`index.html` is current. Local development remains at <http://localhost:5181/>.
-`CNAME`, `.nojekyll`, Pages settings and the local-only `_archive/` are untouched.
-The six-beat timeline and all shaders are unchanged.
+**Red-light + star-ray refinement — approved release, 2026-09-08.** The generated
+root `index.html` is current and verified; the development preview remains at
+<http://localhost:5181/>. Both optical passes are included in this revision.
+Reference studies, candidate comparisons and selected values are recorded in §5.
+Current evidence is in
+`/tmp/ncarnate-ray-polish/qa/`, with Lusion captures in its sibling `references/`
+folder. The prior red-light comparisons remain in `/tmp/ncarnate-red-polish/qa/`.
+
+Changed: red lattice coverage, joins, tips and node lighting; star-ray core,
+halo, travelling highlights and intersection rolloff. Unchanged: source artwork
+coordinates, six-beat timeline, final mark, scroll/resize behavior, `CNAME`,
+`.nojekyll`, Pages settings and `_archive/`.
+
+**Interaction polish — published as `ab17ceb`.** The following lifecycle and
+mobile refinements remain in place:
 
 **Refinement, not redesign**
 
@@ -423,9 +498,10 @@ The six-beat timeline and all shaders are unchanged.
 - The single-file build uses a replacement callback when inlining JavaScript;
   literal dollar sequences in minified code cannot corrupt the HTML anymore.
 
-**Verification artifacts** live outside this public repository, in
+**Earlier interaction-pass artifacts** live outside this public repository, in
 `/tmp/ncarnate-polish/qa/`; the Playwright runners are in its parent directory.
-These are local working evidence, not published site assets. Measured gates and
+Current optical-pass evidence is in `/tmp/ncarnate-ray-polish/qa/`. These are
+local working evidence, not published site assets. Current measured gates and
 hardware/emulation limits are recorded in §5.
 
 ```

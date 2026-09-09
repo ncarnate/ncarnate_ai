@@ -44,10 +44,17 @@ export function buildLattice() {
   // Each segment becomes a quad the vertex shader widens in screen space, so
   // the lattice is antialiased analytically like everything else in the frame
   // — GL_LINES hairlines cannot be, and stair-step on every diagonal at 1x.
-  const pa = [], pb = [], meta = [], corner = [], index = [];
+  const pa = [], pb = [], meta = [], corner = [], join = [], index = [];
   let seg = 0;
   geometry.lattice.forEach((el, ei) => {
     const pts = el.pts;
+    const last = pts[pts.length - 1];
+    const closed = Math.hypot(pts[0][0] - last[0], pts[0][1] - last[1]) < 1e-4;
+    const joins = pts.map((point, i) => {
+      const before = pts[i - 1] || (closed ? pts[pts.length - 2] : point);
+      const after = pts[i + 1] || (closed ? pts[1] : point);
+      return strokeJoin(before, point, after);
+    });
     // cumulative arc length for an even reveal regardless of sampling density
     const cum = [0];
     for (let i = 1; i < pts.length; i++) {
@@ -62,6 +69,7 @@ export function buildLattice() {
         pb.push(b[0], b[1]);
         meta.push(ei, cum[i + end] / total);
         corner.push(end, side);
+        join.push(...joins[i + end]);
       }
       const v = seg * 4;
       index.push(v, v + 1, v + 2, v + 2, v + 1, v + 3);
@@ -73,10 +81,30 @@ export function buildLattice() {
     pb: new Float32Array(pb),
     meta: new Float32Array(meta),
     corner: new Float32Array(corner),
+    join: new Float32Array(join),
     index: new Uint16Array(index),
     count: seg,
     elements: geometry.lattice.length,
   };
+}
+
+/**
+ * Adjacent quads share a miter edge rather than overlapping luminous end caps.
+ * Otherwise densely sampled curves get heavier than sparse straight segments.
+ */
+function strokeJoin(before, point, after) {
+  const normal = (a, b) => {
+    const x = b[0] - a[0], y = b[1] - a[1];
+    const length = Math.hypot(x, y);
+    return length > 1e-6 ? [-y / length, x / length] : null;
+  };
+  const incoming = normal(before, point), outgoing = normal(point, after);
+  if (!incoming) return outgoing || [0, 1];
+  if (!outgoing) return incoming;
+  const x = incoming[0] + outgoing[0], y = incoming[1] + outgoing[1];
+  // Bound acute sampled corners so a nearly reversing path cannot grow a spike.
+  const divisor = Math.max(0.5, x * outgoing[0] + y * outgoing[1]);
+  return [x / divisor, y / divisor];
 }
 
 /**

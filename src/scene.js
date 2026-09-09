@@ -36,6 +36,9 @@ export function boot({ progress = 0 } = {}) {
   const MARK_DIST = 300;   // artwork units mapped to 1.0 outside the mark
   const DUST_COUNT = 700;
   const MARK_CORE = 120;   // and inside it
+  // A subpixel filament: subordinate to the white field at 1x and retina.
+  // Calibrated in-context against the line hierarchy discussed in README §5.
+  const LATTICE_WIDTH = 0.55;
 
   const canvas = document.querySelector('#gl');
   const renderer = new Renderer({
@@ -150,14 +153,15 @@ export function boot({ progress = 0 } = {}) {
       pb: { size: 2, data: lattice.pb },
       meta: { size: 2, data: lattice.meta },
       corner: { size: 2, data: lattice.corner },
+      join: { size: 2, data: lattice.join },
       index: { data: lattice.index },
     }),
     program: new Program(gl, {
       vertex: latticeVert, fragment: latticeFrag,
       transparent: true, cullFace: null, depthTest: false, depthWrite: false,
       uniforms: {
-        ...view, uProgress: { value: uLatticeProg }, uFade: { value: 1 }, uGround: { value: 0 },
-        uWidth: { value: Math.max(1, 0.7 * renderer.dpr) },
+        ...view, uProgress: { value: uLatticeProg }, uFade: { value: 1 },
+        uWidth: { value: LATTICE_WIDTH * renderer.dpr },
       },
     }),
   });
@@ -242,7 +246,7 @@ export function boot({ progress = 0 } = {}) {
     view.uResolution.value.set([bw, bh]);
     dustMesh.program.uniforms.uDpr.value = dpr;
     fieldProgram.uniforms.uDpr.value = dpr;
-    latticeMesh.program.uniforms.uWidth.value = Math.max(1, 0.7 * dpr);
+    latticeMesh.program.uniforms.uWidth.value = LATTICE_WIDTH * dpr;
 
     // Keep the approved desktop and mobile composition shares exactly as drawn.
     const markShare = w < 700 ? 0.46 : 0.34;
@@ -489,7 +493,6 @@ export function boot({ progress = 0 } = {}) {
     dustMesh.program.uniforms.uTime.value = sceneTime * 0.001;
     dustMesh.program.uniforms.uFade.value = state.dust * (1 - state.ground);
     latticeMesh.program.uniforms.uFade.value = state.latticeFade * state.ink;
-    latticeMesh.program.uniforms.uGround.value = state.ground;
     // ground luminance, so the bright pass measures only what exceeds the page
     prefilterProgram.uniforms.uBase.value = 0.041 + state.ground * 0.861;
 
