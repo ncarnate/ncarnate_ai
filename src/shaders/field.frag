@@ -88,6 +88,13 @@ void main() {
   // and the growing tip trails. Nothing else in the frame reacts to velocity
   // except the chromatic aberration in the composite.
   float smear = 1.0 - uVel * 0.48;
+  // Construction stays quieter than the reveal. Inside the emerging N, return
+  // to its authored light profile so restraint does not dim the payoff.
+  float focus = mask * uMarkReveal;
+  float rayWidth = mix(1.15, 1.50, focus);
+  float rayCore = mix(0.80, 1.0, focus);
+  float rayGlow = mix(0.12, 0.22, focus);
+  float rayFalloff = mix(0.125, 0.085, focus);
   float lineAcc = 0.0;
   float headAcc = 0.0;
   for (int i = 0; i < 12; i++) {
@@ -104,14 +111,16 @@ void main() {
     float fromCentre = abs(along - M.x);
     float within = 1.0 - smoothstep(reach - 26.0, reach + 2.0, fromCentre);
 
-    // crisp core + soft halo, both in artwork units
-    float core = 1.0 - smoothstep(0.0, 1.5 + 0.8 / uScale, d);
-    float glow = exp(-d * 0.085 * smear);
+    // Retain the device-pixel feather: narrowing the light must not introduce
+    // shimmer as the camera rotates across subpixel positions on a 1x screen.
+    float core = 1.0 - smoothstep(0.0, rayWidth + 0.8 / uScale, d);
+    float glow = exp(-d * rayFalloff * smear);
 
-    lineAcc += within * (core + glow * 0.22);
-    // bright head at the growing tip — reads as light drawing itself
-    float head = exp(-abs(fromCentre - reach) * 0.09 * smear) * step(0.001, prog) * (1.0 - step(0.999, prog));
-    headAcc += head * (core + glow * 0.5);
+    lineAcc += within * (core * rayCore + glow * rayGlow);
+    // A travelling highlight, not a flare; let it settle rather than switch off.
+    float active = smoothstep(0.0, 0.03, prog) * (1.0 - smoothstep(0.94, 1.0, prog));
+    float head = exp(-abs(fromCentre - reach) * 0.09 * smear) * active;
+    headAcc += head * (core + glow * 0.32);
   }
   // Coalescence: rather than fading a shape in, bias the whole light field so
   // it concentrates inside the mark and drains outside it. The N becomes
@@ -120,11 +129,16 @@ void main() {
   // the silhouette first, so the N is felt as a shape before it is one.
   float outside = 0.10 + 0.62 * halo;
   float sel = mix(1.0, mix(outside, 1.45, mask), uMarkReveal);
-  lineAcc = min(lineAcc * sel, 2.2) * uInkFade;
+  lineAcc *= sel;
+  // Six rays meet at each star. A soft local shoulder preserves their crossing
+  // detail instead of letting the sum flatten into a white hotspot.
+  float over = max(lineAcc - 1.0, 0.0);
+  float quiet = min(lineAcc, 1.0) + over / (1.0 + over / 0.70);
+  lineAcc = mix(quiet, min(lineAcc, 2.2), focus) * uInkFade;
   headAcc = min(headAcc, 1.6) * uInkFade;
 
   col = mix(col, strokeCol, clamp(lineAcc * 0.5, 0.0, 1.0));
-  col += strokeCol * headAcc * 0.30;
+  col += strokeCol * headAcc * mix(0.20, 0.30, focus);
 
   // --- 4 nodes ------------------------------------------------------------
   float discAcc = 0.0;
@@ -135,9 +149,11 @@ void main() {
     if (prog <= 0.0) continue;
     float d = length(p - N.xy);
     // elastic-ish pop handled on the JS side; here prog is the eased scale
-    float r = N.z * prog;
+    // Keep the authored centre and arrival, but let the node read as a pinprick.
+    float r = N.z * prog * 0.72;
     discAcc += 1.0 - smoothstep(r - 1.2, r + 1.2, d);
-    glowAcc += exp(-max(d - r, 0.0) * 0.055) * prog;
+    // A compact skirt keeps ignition legible without bathing the lattice in red.
+    glowAcc += exp(-max(d - r, 0.0) * 0.090) * prog;
   }
   discAcc = clamp(discAcc, 0.0, 1.0) * uInkFade;
   glowAcc = clamp(glowAcc, 0.0, 2.2) * uInkFade;
@@ -147,9 +163,9 @@ void main() {
   // these read pink. Inside the disc the crossing is not deleted, it is
   // tinted: it keeps its energy and burns red.
   float crossing = dot(col, vec3(0.299, 0.587, 0.114));
-  col = mix(col, RED_HOT * crossing * 1.10, discAcc);
-  col += RED_HOT * discAcc * 0.95;
-  col += RED * glowAcc * 0.50;
+  col = mix(col, RED_HOT * crossing * 0.82, discAcc);
+  col += RED_HOT * discAcc * 0.52;
+  col += RED * glowAcc * 0.18;
 
   // The silhouette holds light of its own before it is ink — otherwise the N
   // only ever reads where construction lines happened to cross it — and its
