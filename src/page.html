@@ -41,6 +41,11 @@
   body.still canvas#gl, body.still #hud { display:none; }
   body.still #scroll_track { height:0 !important; }
 
+  @media (pointer:coarse) and (max-width:699px), (pointer:coarse) and (max-height:699px) {
+    /* Match the WebGL composition's slight optical lift on the fallback still. */
+    #still svg { transform:translateY(-2vh); transform:translateY(-2svh); }
+  }
+
   @media (prefers-reduced-motion: reduce) {
     #scroll_track { height:0 !important; }
   }

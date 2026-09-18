@@ -8,7 +8,7 @@ domain resolves, by design.
 ## Current state
 
 - `index.html` — **the entire site, and a generated file.** One self-contained
-  document, 265 kB / 95 kB gzipped: markup, styles, shaders, artwork geometry
+  document, 266 kB / 95 kB gzipped: markup, styles, shaders, artwork geometry
   and the renderer are all inlined, so the page makes no second request. Do not
   hand-edit it; `npm run build` overwrites it.
 - `src/` — the source it is built from (see [Build state](#build-state)).
@@ -33,7 +33,11 @@ register of [Lusion](https://lusion.co/).
 Everything about this project stays in this repo. This file is the brief; the
 source is in `src/`.
 
-**Status: interaction, red-light and star-ray polish complete (2026-09-08).**
+**Status: mobile vertical-framing polish complete (2026-09-18).**
+Stars and mark now share an optically lifted centre in the visible phone viewport;
+the approved desktop composition, artwork, lighting and six beats are unchanged.
+
+**Previous optical passes (2026-09-08).**
 This revision refines the red lattice, node lighting and white construction
 rays on top of the interaction polish in `ab17ceb`; the source geometry, six
 beats and final mark remain unchanged. Both optical passes are approved.
@@ -236,6 +240,42 @@ Node 22 via `.nvmrc`.
 These are the gates. Iterate until every one passes — this list is what
 "super clean" means, so that iteration converges instead of wandering.
 
+**Mobile framing verification — 2026-09-18**
+
+- Native Safari in **iOS 18.5 Simulator / Xcode 16.4**: iPhone 16e (390×844),
+  16 Pro (402×874), and 16 Pro Max (440×956). Compared before/after framing and
+  inspected stars, lattice and the final N with expanded/collapsed controls.
+  The final uninstrumented production HTML was also traversed using XCTest touch
+  gestures on Pro Max, including orientation changes and app-away/resume.
+- Actual Safari toolbar collapse produced visible-height changes without a
+  render-target resize or ScrollTrigger refresh. Portrait→landscape→portrait
+  retained progress **0.89356→0.89336** (native scroll-pixel rounding), one trigger,
+  and exactly one storage resize for each genuine orientation change.
+- Playwright 1.58.2: Chromium desktop, 375×667, 390×844, 440×956, Android 3×,
+  and WebKit iPhone. Screenshots at 0/20/60/80/100% were inspected. All artwork
+  origins match the intended centre throughout rotation/zoom; desktop remains
+  at 50%, phones at 48% of the visible height.
+- Zero-progress load, exact full-state reverse, 30 injected toolbar resizes,
+  orientation, unchanged GPU object counts, reduced-motion idle and restoration,
+  SVG fallback and clean consoles pass. A targeted regression also injects
+  Safari's late scroll restoration and verifies immediate takeover by a new touch.
+- Entire rebuilt document: **266.18 kB raw / 94.98 kB gzipped** (Vite).
+  Simulator and desktop GPU measurements are not physical-phone thermal certification.
+
+**Framing-pass performance check (September 18).** Same Apple M4 Max host,
+hardware ANGLE/Metal and normal 120 Hz pacing; three 10-second forward/reverse
+runs per profile, screenshots outside timing windows. Worst percentile across
+three runs, not a selected best run. **14,406 frames; zero over 50 ms.**
+The iPhone viewport here is Playwright's 390×664 visible-page preset, distinct
+from the 390×844 full-height profile in the older table below.
+
+| Profile | rAF p50 | p95 | p99 | Worst | Render CPU p95 |
+|---|---:|---:|---:|---:|---:|
+| Desktop 1440×900 @2× | 8.3 ms | 9.3 ms | 9.4 ms | 9.8 ms | 0.2 ms |
+| iPhone 390×664 @3× | 8.3 ms | 9.3 ms | 9.4 ms | 9.4 ms | 0.3 ms |
+| iPhone 390×664, CPU 4× | 8.3 ms | 9.3 ms | 9.4 ms | 9.4 ms | 0.4 ms |
+| Android 412×839, CPU 4× | 8.3 ms | 9.3 ms | 9.4 ms | 9.5 ms | 0.4 ms |
+
 **Red-light finish: reference and calibration**
 
 The original stroke weight was tuned by eye. This pass uses explicit visual
@@ -313,9 +353,9 @@ The old 1–2 ms "60fps" figures were collected with Chromium's frame-rate limit
 disabled; they were not real display cadence and have been superseded. rAF
 intervals below measure cadence; render-CPU time measures JS/WebGL submission,
 **not completed GPU time**. CPU throttling does not emulate a phone GPU or prove
-performance on other integrated graphics. Physical iOS/Android toolbar behavior
-and device GPU/thermal performance remain unmeasured; mobile results here are
-explicitly emulation, plus the injected toolbar-lifecycle test below.
+performance on other integrated graphics. Physical-device GPU/thermal performance
+remains unmeasured; these September 8 mobile results are emulation. Native Safari toolbar and rotation behavior were
+subsequently checked in the iOS Simulator on September 18 (see above).
 
 **Performance**
 
@@ -449,6 +489,29 @@ fresh session does not reopen them.
 ---
 
 ## Build state
+
+**Mobile vertical framing — 2026-09-18.** The generated root `index.html` is
+rebuilt; the development preview remains at <http://localhost:5181/>.
+
+- Confirmed the low alignment in native Safari: on iPhone 16 Pro the stable
+  canvas was 760 CSS px tall while the visible page was 678 px. Its old centre
+  was therefore **41 px below the visible midpoint** with the controls expanded.
+- Keep the stable `100lvh` drawing buffer, but place the shared stars/lattice/N
+  origin at **48% of visible height** on phone-sized coarse-pointer viewports.
+  The two-percent optical lift is a visual judgment, not a rule attributed to
+  Lusion. It gives a little more space beneath the composition without changing
+  its scale. With those Safari controls expanded, the total correction is
+  **54.6 CSS px upward**; with them collapsed, the lift is **15.2 px**.
+- Apply the offset through the inverse camera transform so it remains vertical
+  throughout rotation and zoom. The SVG fallback receives the same optical lift.
+  Desktop, geometry, lighting, shaders, timing and artwork proportions are unchanged.
+- Native Safari also exposed a late pixel-scroll restoration during orientation
+  changes. Retain the normalized beat through the 750 ms rotation settling window;
+  a new touch takes over immediately. Toolbar motion still does not resize render
+  targets or refresh the timeline.
+
+Verification and local evidence: `/tmp/ncarnate-mobile-align/qa/`. Captures and
+XCTest/Playwright runners stay outside this public repository.
 
 **Scroll hint removed — approved release, 2026-09-08.** Removed the label, animated
 line, styles, timer and lifecycle hooks. The generated `index.html` is rebuilt.
