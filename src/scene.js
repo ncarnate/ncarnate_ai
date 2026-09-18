@@ -222,6 +222,7 @@ export function boot({ progress = 0 } = {}) {
   const track = document.querySelector('#scroll_track');
   const layout = { width: 0, height: 0, distance: 0, resizes: 0, refreshes: 0 };
   let lenis = null, trigger = null, resizeTimer = 0;
+  let orientationPosition = null, orientationUntil = 0;
 
   function sizeTrack() {
     // The scroll distance is stable, but its tail follows the visible viewport.
@@ -236,7 +237,8 @@ export function boot({ progress = 0 } = {}) {
     sizeTrack();
     if (w === layout.width && h === layout.height && dpr === renderer.dpr) return false;
 
-    const position = preserveProgress && trigger ? trigger.progress : progress;
+    const position = orientationPosition
+      ?? (preserveProgress && trigger ? trigger.progress : progress);
     renderer.dpr = dpr;
     renderer.setSize(w, h);
     // OGL writes pixel styles; CSS, not the drawing buffer, owns viewport sizing.
@@ -293,8 +295,19 @@ export function boot({ progress = 0 } = {}) {
       if (resize()) renderStill();
     }, 160);
   }
+  function releaseOrientation() {
+    orientationPosition = null;
+  }
+  function orientationChange() {
+    // Safari restores its old pixel scroll after the new layout has settled.
+    // Hold the beat through that native animation; real input takes over at once.
+    orientationPosition = motionPosition;
+    orientationUntil = performance.now() + 750;
+    scheduleResize();
+  }
   window.addEventListener('resize', scheduleResize, { passive: true });
-  window.addEventListener('orientationchange', scheduleResize, { passive: true });
+  window.addEventListener('orientationchange', orientationChange, { passive: true });
+  window.addEventListener('pointerdown', releaseOrientation, { passive: true });
 
   // ---------------------------------------------------------------------------
   // the six beats
@@ -436,6 +449,10 @@ export function boot({ progress = 0 } = {}) {
     last = now;
     if (!reduced) sceneTime += dt;
     lenis?.raf(sceneTime);
+    if (orientationPosition !== null) {
+      seek(orientationPosition);
+      if (now >= orientationUntil) releaseOrientation();
+    }
     if (!lenis && !reduced) {
       const delta = window.scrollY - previousScroll;
       const target = delta * (1000 / 60) / dt;
@@ -462,6 +479,17 @@ export function boot({ progress = 0 } = {}) {
     const rest = reduced ? 0 : Math.max(0, (timeline.progress() - 0.962) / 0.038);
     view.uScale.value = baseScale * cam.zoom * (1 + rest * Math.sin(sceneTime * 0.00042) * 0.0024);
     view.uRot.value = cam.rot;
+
+    // The stable lvh buffer extends behind mobile browser controls. Compose in
+    // the visible viewport instead, with a small optical lift above its midpoint.
+    // Move the shared artwork origin, never the canvas or its GPU storage.
+    const phone = touchQuery.matches && Math.min(layout.width, layout.height) < 700;
+    const visibleHeight = Math.min(window.innerHeight, layout.height);
+    const lift = phone ? layout.height * 0.5 - visibleHeight * 0.48 : 0;
+    const offset = lift * renderer.dpr / view.uScale.value;
+    // Inverse camera mapping keeps the lift vertical throughout rotation/zoom.
+    view.uCenter.value[0] = ART_CENTRE[0] - Math.sin(cam.rot) * offset;
+    view.uCenter.value[1] = ART_CENTRE[1] + Math.cos(cam.rot) * offset;
 
     const vel = Math.min(Math.abs(velocity) / 34, 1);
     fieldProgram.uniforms.uTime.value = sceneTime * 0.001;
@@ -611,7 +639,8 @@ export function boot({ progress = 0 } = {}) {
       motionQuery.removeEventListener('change', motionChange);
       touchQuery.removeEventListener('change', inputChange);
       window.removeEventListener('resize', scheduleResize);
-      window.removeEventListener('orientationchange', scheduleResize);
+      window.removeEventListener('orientationchange', orientationChange);
+      window.removeEventListener('pointerdown', releaseOrientation);
       window.removeEventListener('pointermove', movePointer);
       window.removeEventListener('keydown', keyboardScroll);
       document.documentElement.removeEventListener('pointerleave', resetPointer);
