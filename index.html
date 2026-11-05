@@ -151,6 +151,10 @@
       text-decoration-color: currentColor;
     }
 
+    [data-reach=sms] {
+      white-space: nowrap;
+    }
+
     .actions {
       margin: 1lh 0 0;
       padding: 0;
@@ -235,9 +239,25 @@
 
     <p>They work across your software and your people. They can follow up with the lead everyone forgot, negotiate with a vendor, answer a customer at 3&#8239;<abbr>am</abbr>, chase down a signature, keep the <abbr>CRM</abbr> current, or fix a typo on your website.</p>
 
-    <p>They live in your organization, with permissions that mirror your org chart.</p>
-
     <p>Build them into your products and services with our <abbr>API</abbr>. They can use your coding agents, and your coding agents can use them.</p>
+
+    <p>Want to work with us? Talk with Ashley.<span class="reach" hidden> Text <a data-reach="sms"></a> or email <a data-reach="mail"></a>.</span> She’s one of them.</p>
+    <script>
+      // Ashley's number and address are assembled here, never written out whole, so scrapers
+      // that read the raw HTML find nothing to harvest. Without JavaScript the clause stays
+      // hidden and the sentence still reads.
+      {
+        const n = ['415', '906', '9686'];
+        const m = ['ashley', 'ncarnate', 'ai'];
+        const sms = document.querySelector('[data-reach=sms]');
+        const mail = document.querySelector('[data-reach=mail]');
+        sms.href = 'sms:+1' + n.join('');
+        sms.textContent = `+1 (${n[0]}) ${n[1]}-${n[2]}`;
+        mail.href = 'mailto:' + `${m[0]}@${m[1]}.${m[2]}`;
+        mail.textContent = `${m[0]}@${m[1]}.${m[2]}`;
+        sms.parentNode.hidden = false;
+      }
+    </script>
 
     <ul class="actions">
       <li><a href="https://app.ncarnate.ai/login?mode=create&amp;next=https%3A%2F%2Fapp.ncarnate.ai%2F">Get started<span aria-hidden="true">→</span></a></li>
