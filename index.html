@@ -92,9 +92,18 @@
       fill: currentColor;
     }
 
+    /* The gap under the mark equals the margin above it, measured to the cap height of the
+       first line rather than its line box, which would add 0.36em of empty leading. */
     main {
       max-width: 29em;
-      padding-top: clamp(4rem, 12vh, 8.5rem);
+      padding-top: var(--margin);
+      text-box: trim-start cap alphabetic;
+    }
+
+    @supports not (text-box: trim-start cap alphabetic) {
+      main > :first-child {
+        margin-top: -0.36em; /* (ascent − cap height) + half-leading, from the font's metrics */
+      }
     }
 
     p {
