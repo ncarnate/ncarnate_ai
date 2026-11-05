@@ -1,5 +1,10 @@
 .DS_Store
 node_modules
-# The previous site is preserved locally only. It is deliberately not published:
-# ncarnate.ai is the pre-launch page and nothing else should be reachable.
+# Local-only material. This repository is public and Pages serves the root, so
+# none of it may be committed: the old site, design references, and working
+# notes (which include a customer's own words).
 _archive/
+_inspo/
+_research/
+*.mp4
+*.mov
