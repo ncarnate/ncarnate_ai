@@ -10,8 +10,10 @@ adding a file, ask whether it should be.
 
 ## Project Structure
 
-- `index.html` — the entire site, hand-written: markup and one `<style>`
-  block. No JavaScript, no build step. Edit it directly.
+- `index.html` — the entire site, hand-written: markup, one `<style>` block,
+  no build step. Edit it directly. Its only script assembles Ashley's number
+  and address from fragments: never write either out whole in the HTML, which
+  is what scrapers read.
 - `favicon.svg` — the N mark, square-padded, ink switching with the theme.
 - `fonts/` — `source-serif-4.woff2` (subset; the regeneration command is in
   README.md) and its `OFL.txt`. Keep the licence with the font.

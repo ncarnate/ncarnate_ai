@@ -1,8 +1,9 @@
 # ncarnate.ai
 
 The public site for Ncarnate, served from GitHub Pages (`CNAME` pins
-`ncarnate.ai`). One hand-written HTML file, one typeface, no JavaScript and no
-build step.
+`ncarnate.ai`). One hand-written HTML file, one typeface, no build step. The
+only JavaScript is a few inline lines that assemble Ashley's phone number and
+address, so neither appears whole in the HTML for scrapers to harvest.
 
 - `index.html` — the whole page: markup and styles, edited directly.
 - `favicon.svg` — the mark; its ink follows the browser's light or dark theme.
