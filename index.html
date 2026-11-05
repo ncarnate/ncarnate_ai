@@ -62,7 +62,10 @@
       min-height: 100svh;
       display: grid;
       grid-template-rows: auto 1fr auto;
-      padding: var(--margin);
+      /* Above and below the mark: the page margin, but never less than the space between
+         paragraphs. On a phone the 24px margin would crowd the mark against the text. */
+      --space: max(var(--margin), 2.5em);
+      padding: var(--space) var(--margin);
       padding-left: max(var(--margin), env(safe-area-inset-left));
       padding-right: max(var(--margin), env(safe-area-inset-right));
       padding-bottom: max(var(--margin), env(safe-area-inset-bottom));
@@ -92,11 +95,11 @@
       fill: currentColor;
     }
 
-    /* The gap under the mark equals the margin above it, measured to the cap height of the
+    /* The gap under the mark equals the space above it, measured to the cap height of the
        first line rather than its line box, which would add 0.36em of empty leading. */
     main {
       max-width: 29em;
-      padding-top: var(--margin);
+      padding-top: var(--space);
       text-box: trim-start cap alphabetic;
     }
 
