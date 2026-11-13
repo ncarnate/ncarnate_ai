@@ -11,7 +11,7 @@ adding a file, ask whether it should be.
 ## Project Structure
 
 - `index.html` — the entire site, hand-written: markup, one `<style>` block,
-  no build step. Edit it directly. Its only script assembles Ashley's number
+  no build step. Edit it directly. Its only script assembles Ash's number
   and address from fragments: never write either out whole in the HTML, which
   is what scrapers read.
 - `favicon.svg` — the N mark, square-padded, ink switching with the theme.
