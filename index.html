@@ -199,10 +199,12 @@
       margin: 0;
     }
 
-    /* The two links wrap as a pair, so a narrow screen never strands one on its own line. */
+    /* The links wrap together under the copyright, then among themselves only when even
+       that row is too narrow, as on a 320px phone. */
     footer ul {
       display: flex;
-      gap: 2em;
+      flex-wrap: wrap;
+      gap: 0.4em 2em;
       padding: 0;
       list-style: none;
     }
@@ -269,10 +271,11 @@
   </main>
 
   <footer>
-    <p>Copyright © 2026 Ncarnate</p>
+    <p>Copyright © 2026 Ncarnate Inc.</p>
     <ul>
       <li><a href="https://app.ncarnate.ai/legal/privacy">Privacy policy</a></li>
       <li><a href="https://app.ncarnate.ai/legal/terms">Terms of service</a></li>
+      <li><a href="https://app.ncarnate.ai/legal/sms">SMS terms</a></li>
     </ul>
   </footer>
 </body>
